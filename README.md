@@ -1,51 +1,51 @@
 # PingBoost Network Lab
 
-Windows-приложение для диагностики качества сетевого соединения. Интерфейс — светлый и лаконичный, вдохновлённый утилитами macOS, но реализованный на WPF для Windows.
+A Windows application for diagnosing network quality. The interface uses a clean, light visual style inspired by macOS utilities and is built with WPF for Windows.
 
-## Возможности прототипа
+## Prototype features
 
-- показывает активные сетевые адаптеры, шлюз и заявленную скорость;
-- по очереди проверяет до 8 введённых IP-адресов или DNS-имён с помощью ICMP;
-- показывает последний и средний ping, средний абсолютный джиттер соседних успешных проб и долю проб без ответа;
-- рисует историю задержки и разрывает линию на пропущенных ответах;
-- выполняет ICMP traceroute с одним запросом на каждый TTL-шаг (до 24 шагов);
-- сравнивает ping сразу после активности сети с ping после выбранной паузы (5/15/30/60 секунд, 5 циклов);
-- выполняет парный A/B-эксперимент: без keepalive и с HTTPS keepalive при одинаковой паузе, показывает среднее и медианное изменение RTT;
-- имеет выключенный по умолчанию HTTPS keepalive с настраиваемым интервалом и отображением числа запросов и объявленного размера ответов;
-- открывает официальный Waveform Bufferbloat Test после отдельного подтверждения: сайт сам показывает idle/download/upload latency, jitter и оценку A+–F;
-- позволяет сохранить текущие показатели как исходный снимок, перезапустить тест после одного изменения и сравнить только новые измерения;
-- экспортирует историю проб в CSV через стандартный диалог сохранения Windows;
-- выводит осторожные рекомендации по наблюдаемым задержке, джиттеру и пропускам ICMP-ответов.
+- Lists active network adapters, gateways, and reported link speeds.
+- Sequentially checks up to eight user-provided IP addresses or DNS names with ICMP.
+- Shows the latest and average ping, mean absolute jitter between adjacent successful probes, and the share of probes with no response.
+- Charts latency history and breaks the line where probes time out.
+- Runs an ICMP traceroute with one probe per TTL step, up to 24 hops.
+- Compares ping immediately after network activity with ping after a selected idle period (5, 15, 30, or 60 seconds; five cycles).
+- Runs a paired A/B experiment with and without HTTPS keepalive at the same idle interval, reporting average and median RTT changes.
+- Provides an opt-in HTTPS keepalive with a configurable interval and request/response-body counters.
+- Opens the official Waveform Bufferbloat Test after a separate confirmation. Waveform displays idle/download/upload latency, jitter, and its A+–F grade.
+- Saves a baseline snapshot, lets you rerun measurements after changing one setting, and compares only the new samples.
+- Exports probe history to CSV using the standard Windows save dialog.
+- Displays cautious recommendations based on observed latency, jitter, and missing ICMP replies.
 
-## Ограничения и безопасность
+## Limitations and safety
 
-- Это диагностический инструмент: он не обещает снизить ping и сам не меняет маршруты, DNS, приоритеты приложений или настройки адаптера.
-- Замеры идут по системному маршруту Windows. Вывод адаптера в интерфейсе пока справочный: привязки проб к конкретному адаптеру нет.
-- ICMP может фильтроваться сервером или сетью и не всегда отражает задержку игрового UDP-трафика. Промежуточный узел traceroute может не отвечать, не прерывая передачу трафика.
-- Указанные «потери» — это доля ICMP-проб без ответа, а не доказанная потеря игровых пакетов.
-- Idle-тест использует ICMP: он измеряет изменение RTT после паузы, но сам по себе не может точно определить внутреннее состояние радиоканала LTE/5G. A/B-сравнение короткое, последовательное, и на него могут влиять меняющиеся условия сотовой сети.
-- Keepalive делает HTTPS GET к выбранному пользователем endpoint (по умолчанию `https://www.google.com/generate_204`). Он может не удержать радиоактивное состояние у конкретного оператора; счётчик тела ответа не включает весь TLS/IP и радиопротокольный расход. Останавливайте его после эксперимента.
-- Bufferbloat-тест запускается на официальном Waveform в браузере, а не внутри приложения. Он может почти полностью занять канал, временно замедлить другие устройства и использовать мобильный трафик; приложение всегда спрашивает подтверждение.
-- Снимок «до» хранится только в памяти процесса и сбрасывается при закрытии приложения. CSV содержит отдельные измерения, но не является автоматически сгенерированным сравнительным отчётом.
-- Рекомендации являются ориентировочными эвристиками, а не автоматической оптимизацией.
+- This is a diagnostic tool. It does not promise to reduce ping and does not change routes, DNS, application priorities, or adapter settings.
+- Measurements use the Windows system route. Adapter details are informational; probes are not currently bound to a specific adapter.
+- ICMP may be filtered by a server or network and does not always reflect game UDP latency. A traceroute hop may not reply even while forwarding traffic.
+- Reported “loss” is the share of ICMP probes with no reply, not confirmed loss of game packets.
+- The idle test measures RTT changes after a pause but cannot determine the LTE/5G radio state by itself. The sequential A/B comparison is short and can be affected by changing cellular conditions.
+- Keepalive sends HTTPS GET requests to the user-selected endpoint (default: `https://www.google.com/generate_204`). It may not keep a particular operator's radio connection active. The response-body counter excludes TLS, IP, and radio-protocol overhead. Stop keepalive when the experiment is complete.
+- The bufferbloat test runs on the official Waveform site in a browser, not inside PingBoost. It may nearly saturate the link, temporarily slow other devices, and use mobile data; the app always asks for confirmation first.
+- The “before” snapshot is held in memory and is lost when the app closes. CSV exports individual probes, not an automatically generated comparison report.
+- Recommendations are heuristic guidance, not automatic optimization.
 
-## Требования
+## Requirements
 
 - Windows 10/11 x64
 - .NET 8 SDK
 
-## Сборка и запуск
+## Build and run
 
 ```powershell
 dotnet build .\PingBoost.csproj
 dotnet run --project .\PingBoost.csproj
 ```
 
-В среде разработки, где создан начальный каркас, обнаружен только .NET 8 runtime; SDK отсутствует. Поэтому сборку нужно проверить после установки .NET 8 SDK.
+The project was verified with .NET SDK 8.0.426: build completed with no warnings or errors.
 
-## Дальнейшая работа
+## Next steps
 
-1. Проверить сборку и пройти ручные сценарии: несколько целей, остановка, таймауты, traceroute, снимок «до/после», экспорт CSV.
-2. Улучшить сохранение/загрузку наборов тестов и добавить экспорт сравнения.
-3. Отдельно спроектировать измерение bufferbloat. Генерацию нагрузки добавлять только как явный тест с предупреждением и ограничениями.
-4. Рассматривать собственный relay только после того, как измерения покажут, что смена маршрута может помочь.
+1. Manually test multiple targets, stopping, timeouts, traceroute, baseline comparison, and CSV export.
+2. Improve saving/loading test profiles and add comparison-report export.
+3. Design a bufferbloat measurement separately. Any traffic-generating test should be opt-in, clearly warned, and bounded.
+4. Consider a private relay only if measurements show that changing routes may help.
