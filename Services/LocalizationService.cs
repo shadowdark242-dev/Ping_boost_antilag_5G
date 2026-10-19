@@ -43,8 +43,6 @@ public static class LocalizationService
         ["HTTPS keepalive endpoint"] = "HTTPS keepalive endpoint", ["Интервал keepalive (секунды)"] = "Keepalive interval (seconds)",
         ["Удалить профиль"] = "Delete profile", ["Сохранить настройки"] = "Save settings",
         ["ROUTE COMPARISON"] = "ROUTE COMPARISON",
-        ["TCP: алгоритм перегрузки BBR2 вместо CUBIC"] = "TCP: BBR2 congestion control instead of CUBIC",
-        ["BBR2 держит очередь у модема короче, чем CUBIC, который наполняет буфер до потерь. Должно снизить задержку при отдаче по TCP (загрузки, облако), на UDP игры не влияет. Если ваша Windows не принимает BBR2, программа скажет об этом и ничего не изменит. Действует на новые соединения."] = "BBR2 keeps the queue at the modem shorter than CUBIC, which fills the buffer until loss. Should lower latency during TCP uploads (downloads to cloud), does not affect game UDP. If your Windows does not accept BBR2 the app says so and changes nothing. Applies to new connections.",
         ["Общий потолок отдачи всего ПК"] = "Overall upload ceiling for the whole PC",
         ["Потолок ниже реальной скорости отдачи не даёт компьютеру забивать очередь модема, и пинг под нагрузкой остаётся низким. Игровой трафик идёт на малой скорости и потолка не достигает. Скорость отдачи канала плавает, начните с 40 Мбит/с и проверьте тестом Waveform."] = "A ceiling below the real upload speed keeps the PC from filling the modem queue so ping under load stays low. Game traffic is low-rate and never reaches the ceiling. Link upload speed varies; start at 40 Mbit/s and check with the Waveform test.",
         ["Потолок отдачи ПК"] = "PC upload ceiling", ["Включить общий потолок"] = "Enable overall ceiling",
