@@ -92,7 +92,7 @@ public static class LocalizationService
         ["QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)"] = "QoS · GAME UDP TRAFFIC MARKING (DSCP)",
         ["Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."] = "Windows marks outgoing UDP traffic of the profile's game process with a DSCP priority. It helps on Wi-Fi and networks that honor DSCP; mobile carriers and phone hotspots may clear the mark.",
         ["Включить для процесса игры"] = "Enable for game process", ["Убрать"] = "Remove", ["Политика не создана."] = "No policy created.",
-        ["★ ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)"] = "★ BACKGROUND UPLOAD LIMIT (BUFFERBLOAT)",
+        ["ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)"] = "BACKGROUND UPLOAD LIMIT (BUFFERBLOAT)",
         ["Когда программа забивает исходящий канал, очередь у модема или оператора растёт и пинг в игре подскакивает. Windows ограничит скорость отдачи перечисленных программ политикой QoS. Ограничивается только исходящий трафик; входящий так не ограничить. Не добавляйте сюда саму игру."] = "When a program fills the uplink, the queue at the modem or carrier grows and in-game ping spikes. Windows will limit the upload rate of the listed programs with a QoS policy. Only outgoing traffic is limited; incoming cannot be limited this way. Do not add the game itself.",
         ["Программы (по одной на строку, без .exe)"] = "Programs (one per line, without .exe)",
         ["Лимит отдачи на программу"] = "Upload limit per program",
