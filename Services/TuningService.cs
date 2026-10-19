@@ -55,8 +55,7 @@ public sealed class TuningService
         new("tcp-autotune-highly", "Ограничить приём TCP сильнее: autotuning HighlyRestricted", "Окно приёма до 256 КБ: примерно 35 Мбит/с на соединение при пинге 60 мс. Заметно снижает скорость загрузок, а пинг под нагрузкой обычно падает сильнее. Только TCP. Если отмечены оба пункта, применяется этот.", false),
         new("reg-tcpack", "TCP: без задержки ACK и без алгоритма Nagle (выбранный адаптер)", "TcpAckFrequency=1, TCPNoDelay=1, TcpDelAckTicks=0. Только TCP-игры и лаунчеры, UDP не затрагивается.", true),
         new("reg-mmcss", "MMCSS: снять сетевое ограничение и повысить отзывчивость", "NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer.", false),
-        new("reg-games", "MMCSS: высокий приоритет задач Games", "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.", false),
-        new("reg-psched", "Не резервировать полосу для QoS", "NonBestEffortLimit=0. На современных Windows почти не влияет, но часто используется в профилях TCP Optimizer.", false)
+        new("reg-games", "MMCSS: высокий приоритет задач Games", "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.", false)
     ];
 
     private readonly TuningBackupStore _store = new();
@@ -158,7 +157,6 @@ public sealed class TuningService
             new(GamesPath, "Scheduling Category", RegistryValueKind.String, "High", "Medium"),
             new(GamesPath, "SFIO Priority", RegistryValueKind.String, "High", "Normal")
         ],
-        "reg-psched" => [new(PschedPath, "NonBestEffortLimit", RegistryValueKind.DWord, 0, null)],
         "reg-tcpack" when adapter is not null =>
         [
             new($@"{InterfacesPath}\{adapter.Guid}", "TcpAckFrequency", RegistryValueKind.DWord, 1, null),
@@ -760,10 +758,16 @@ public sealed class TuningService
         RequireAdministrator();
         var log = new List<string>();
 
-        foreach (var id in new[] { "reg-mmcss", "reg-games", "reg-psched" })
+        foreach (var id in new[] { "reg-mmcss", "reg-games" })
             foreach (var spec in RegistrySpecs(id, null))
                 SetDefault(spec, log);
         DeleteRegistryValue(QosPath, "Do not use NLA");
+        // The "do not reserve QoS bandwidth" tweak was removed; clean up the value if an earlier build wrote it.
+        using (var psched = Registry.LocalMachine.OpenSubKey(PschedPath, writable: true))
+        {
+            if (psched?.GetValue("NonBestEffortLimit") is 0)
+                psched.DeleteValue("NonBestEffortLimit", throwOnMissingValue: false);
+        }
         log.Add("✓ Реестр: параметры MMCSS, Psched и QoS возвращены к стандартным.");
 
         using (var interfaces = Registry.LocalMachine.OpenSubKey(InterfacesPath))
@@ -879,7 +883,7 @@ public sealed class TuningService
         var rsc = await QueryAsync("\"RSC (глобально): $((Get-NetOffloadGlobalSetting).ReceiveSegmentCoalescing)\"");
         lines.Add(rsc ?? "RSC: не удалось прочитать");
 
-        foreach (var spec in new[] { "reg-mmcss", "reg-games", "reg-psched" }.SelectMany(id => RegistrySpecs(id, null)))
+        foreach (var spec in new[] { "reg-mmcss", "reg-games" }.SelectMany(id => RegistrySpecs(id, null)))
         {
             using var key = Registry.LocalMachine.OpenSubKey(spec.Path);
             lines.Add($"{spec.Name}: {FormatRegistry(key?.GetValue(spec.Name))}");

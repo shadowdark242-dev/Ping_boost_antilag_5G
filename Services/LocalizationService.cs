@@ -75,8 +75,6 @@ public static class LocalizationService
         ["NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer."] = "NetworkThrottlingIndex disabled, SystemResponsiveness=10. Settings from TCP Optimizer.",
         ["MMCSS: высокий приоритет задач Games"] = "MMCSS: high priority for Games tasks",
         ["GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High."] = "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.",
-        ["Не резервировать полосу для QoS"] = "Do not reserve bandwidth for QoS",
-        ["NonBestEffortLimit=0. На современных Windows почти не влияет, но часто используется в профилях TCP Optimizer."] = "NonBestEffortLimit=0. Little effect on modern Windows, but common in TCP Optimizer profiles.",
         ["Оптимизация"] = "Optimization", ["UDP-монитор"] = "UDP monitor", ["Профиль"] = "Profile", ["Статус"] = "Status",
         ["ПРОФИЛЬ ИГРЫ"] = "GAME PROFILE",
         ["Профиль хранит цели, параметры теста простоя и keepalive. Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор»."] = "A profile stores targets, idle-test and keepalive settings. The game process is used on the Optimization and UDP monitor tabs.",
