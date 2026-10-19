@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -15,6 +16,9 @@ public partial class MainWindow
     private readonly LocalLossMonitor _localLoss = new();
     private readonly GameProcessPriorityService _priority = new();
     private readonly Dictionary<string, CheckBox> _tweakChecks = [];
+    private readonly Dictionary<string, TextBlock> _tweakBadges = [];
+    private readonly HashSet<string> _appliedNow = [];
+    private int _appliedRefreshVersion;
     private DispatcherTimer? _udpTimer;
     private DispatcherTimer? _priorityTimer;
     private CancellationTokenSource? _mtuCancellation;
@@ -33,8 +37,21 @@ public partial class MainWindow
         {
             var check = new CheckBox { Content = tweak.Title, ToolTip = tweak.Description, VerticalAlignment = VerticalAlignment.Center };
             _tweakChecks[tweak.Id] = check;
-            check.Margin = new Thickness(0, 6, 0, 0);
-            TweaksPanel.Children.Add(check);
+            var badge = new TextBlock
+            {
+                Text = "включено",
+                Foreground = System.Windows.Media.Brushes.SeaGreen,
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(10, 0, 0, 0),
+                Visibility = Visibility.Collapsed
+            };
+            _tweakBadges[tweak.Id] = badge;
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            row.Children.Add(check);
+            row.Children.Add(badge);
+            TweaksPanel.Children.Add(row);
             TweaksPanel.Children.Add(new TextBlock
             {
                 Text = tweak.Description,
@@ -63,6 +80,39 @@ public partial class MainWindow
             try { Task.Run(() => _tuning.ExitGameModeAsync()).Wait(TimeSpan.FromSeconds(20)); }
             catch (AggregateException) { }
         }
+    }
+
+    /// <summary>Ticks the checkboxes of the tweaks that are in effect right now and shows a "включено" mark next to them.</summary>
+    private async Task RefreshAppliedTweaksAsync()
+    {
+        var version = ++_appliedRefreshVersion;
+        try
+        {
+            var applied = await _tuning.GetAppliedTweaksAsync(SelectedAdapter);
+            if (version != _appliedRefreshVersion)
+                return; // a newer refresh (for example after another adapter was chosen) is on its way
+            _appliedNow.Clear();
+            foreach (var (id, check) in _tweakChecks)
+            {
+                var on = applied.TryGetValue(id, out var value) && value;
+                if (on)
+                    _appliedNow.Add(id);
+                check.IsChecked = on;
+                _tweakBadges[id].Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or System.Text.Json.JsonException or IOException or System.Security.SecurityException)
+        {
+            AppendTuningLog([$"Не удалось определить, какие пункты включены: {ex.Message}"]);
+        }
+    }
+
+    private void TuningAdapter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Fires while the adapter list is being filled; the visual tree may not be complete during InitializeComponent.
+        if (!IsLoaded)
+            return;
+        _ = RefreshAppliedTweaksAsync();
     }
 
     private void UpdateRestoreButtons()
@@ -122,7 +172,10 @@ public partial class MainWindow
             TuningAdapterComboBox.ItemsSource = adapters;
             TuningAdapterComboBox.SelectedIndex = adapters.Count > 0 ? 0 : -1;
             if (adapters.Count == 0)
+            {
                 AppendTuningLog(["Активные сетевые адаптеры не найдены."]);
+                await RefreshAppliedTweaksAsync(); // no selection change will trigger it
+            }
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or System.Text.Json.JsonException)
         {
@@ -134,10 +187,12 @@ public partial class MainWindow
 
     private async void ApplyTweaks_Click(object sender, RoutedEventArgs e)
     {
-        var ids = _tweakChecks.Where(pair => pair.Value.IsChecked == true).Select(pair => pair.Key).ToArray();
+        // Items that are already in effect are skipped, so applying one more tweak does not restart the adapter again.
+        var ids = _tweakChecks.Where(pair => pair.Value.IsChecked == true && !_appliedNow.Contains(pair.Key))
+            .Select(pair => pair.Key).ToArray();
         if (ids.Length == 0)
         {
-            AppendTuningLog(["Отметьте хотя бы один пункт."]);
+            AppendTuningLog(["Нет новых пунктов: отметьте то, что ещё не включено (пункты с пометкой «включено» уже действуют)."]);
             return;
         }
         if (!RequireAdministratorRights())
@@ -151,6 +206,7 @@ public partial class MainWindow
         try
         {
             AppendTuningLog(await _tuning.ApplyAsync(ids, SelectedAdapter));
+            await RefreshAppliedTweaksAsync();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception)
         {
@@ -168,6 +224,7 @@ public partial class MainWindow
         try
         {
             AppendTuningLog([await _tuning.DescribeAsync(SelectedAdapter)]);
+            await RefreshAppliedTweaksAsync();
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or System.Text.Json.JsonException)
         {
@@ -496,8 +553,7 @@ public partial class MainWindow
             QosStatusText.Text = "Политика не создана.";
             ThrottleStatusText.Text = "Ограничений нет.";
             ApplyMtuButton.IsEnabled = false;
-            foreach (var check in _tweakChecks.Values)
-                check.IsChecked = false;
+            await RefreshAppliedTweaksAsync();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception
                                        or System.Security.SecurityException or System.IO.IOException)

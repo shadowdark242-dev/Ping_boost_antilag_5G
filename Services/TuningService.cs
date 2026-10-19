@@ -873,6 +873,81 @@ public sealed class TuningService
 
     // ---------------------------------------------------------------- current state
 
+    /// <summary>Tells for every tweak whether its target value is currently in effect (used to tick the checkboxes).</summary>
+    public async Task<IReadOnlyDictionary<string, bool>> GetAppliedTweaksAsync(AdapterInfo? adapter)
+    {
+        var applied = Tweaks.ToDictionary(tweak => tweak.Id, _ => false);
+
+        var adapterPart = string.Empty;
+        if (adapter is not null)
+        {
+            var name = PowerShellRunner.Quote(adapter.Name);
+            adapterPart =
+                $"$l=Get-NetAdapterLso -Name {name} -ErrorAction SilentlyContinue; if($l){{ $lso=\"$($l.V1IPv4Enabled),$($l.IPv4Enabled),$($l.IPv6Enabled)\" }}; " +
+                $"$r=Get-NetAdapterRsc -Name {name} -ErrorAction SilentlyContinue; if($r){{ $rsc=\"$($r.IPv4Enabled),$($r.IPv6Enabled)\" }}; ";
+        }
+        var output = await QueryAsync(
+            $"$t=Get-NetTCPSetting -SettingName {TcpSetting}; $g=[string](Get-NetOffloadGlobalSetting).ReceiveSegmentCoalescing; $lso=''; $rsc=''; " +
+            adapterPart +
+            "\"$($t.Timestamps)|$($t.EcnCapability)|$($t.AutoTuningLevelLocal)|$g|$lso|$rsc\"");
+        var parts = (output ?? string.Empty).Split('|');
+        if (parts.Length == 6)
+        {
+            applied["tcp-timestamps"] = parts[0] == "Disabled";
+            applied["tcp-ecn"] = parts[1] == "Enabled";
+            applied["tcp-autotune-restricted"] = parts[2] == "Restricted";
+            applied["tcp-autotune-highly"] = parts[2] == "HighlyRestricted";
+            applied["tcp-rsc"] = parts[3] == "Disabled";
+            applied["ad-lso"] = AllFlagsOff(parts[4]);
+            applied["ad-rsc"] = AllFlagsOff(parts[5]);
+        }
+
+        applied["reg-mmcss"] = RegistryApplied(RegistrySpecs("reg-mmcss", adapter));
+        applied["reg-games"] = RegistryApplied(RegistrySpecs("reg-games", adapter));
+        if (adapter is not null)
+        {
+            applied["reg-tcpack"] = RegistryApplied(RegistrySpecs("reg-tcpack", adapter));
+
+            var props = await ReadAdvancedAsync(adapter, AdvancedTweaks.Values.SelectMany(map => map.Keys).Distinct());
+            foreach (var (id, desired) in AdvancedTweaks)
+                applied[id] = AdvancedApplied(props, desired);
+
+            var classKey = FindAdapterClassKey(adapter.Guid);
+            if (classKey is not null)
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(classKey);
+                var powerOff = key?.GetValue("PnPCapabilities") is int capabilities && (capabilities & PnpDisableDeviceSleep) == PnpDisableDeviceSleep;
+                // The power tweak consists of the registry bits and the driver keywords, so both have to be in place.
+                applied["ad-power"] = powerOff && (AdvancedApplied(props, AdvancedTweaks["ad-power"]) || !props.Keys.Any(AdvancedTweaks["ad-power"].ContainsKey));
+            }
+        }
+        return applied;
+    }
+
+    private static bool AllFlagsOff(string flags) =>
+        flags.Length > 0 && !flags.Split(',').Any(flag => flag.Equals("True", StringComparison.OrdinalIgnoreCase));
+
+    private static bool RegistryApplied(IReadOnlyList<RegistryValueSpec> specs) =>
+        specs.Count > 0 && specs.All(spec =>
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(spec.Path);
+            return key?.GetValue(spec.Name) switch
+            {
+                int number when spec.Desired is int wanted => number == wanted,
+                string text when spec.Desired is string wanted => text == wanted,
+                _ => false
+            };
+        });
+
+    /// <summary>True when at least one keyword of the tweak exists and every existing, supported keyword has the wanted value.</summary>
+    private static bool AdvancedApplied(Dictionary<string, AdvancedProperty> props, Dictionary<string, string> desired)
+    {
+        var relevant = desired
+            .Where(pair => props.TryGetValue(pair.Key, out var prop) && !prop.Value.Contains(',') && prop.Valid.Contains(pair.Value))
+            .ToArray();
+        return relevant.Length > 0 && relevant.All(pair => props[pair.Key].Value == pair.Value);
+    }
+
     public async Task<string> DescribeAsync(AdapterInfo? adapter)
     {
         var lines = new List<string>();

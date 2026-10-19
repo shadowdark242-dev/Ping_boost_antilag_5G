@@ -348,7 +348,7 @@
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Адаптер" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
-                                    <ComboBox x:Name="TuningAdapterComboBox" Width="420" />
+                                    <ComboBox x:Name="TuningAdapterComboBox" Width="420" SelectionChanged="TuningAdapter_SelectionChanged" />
                                     <Button Content="Обновить" Margin="8,0,0,0" Click="RefreshTuningAdapters_Click" Style="{StaticResource SecondaryButton}" />
                                 </StackPanel>
                                 <StackPanel x:Name="TweaksPanel" Margin="0,12,0,0" />
@@ -356,7 +356,7 @@
                                     <Button x:Name="ApplyTweaksButton" Content="Применить выбранное" Click="ApplyTweaks_Click" />
                                     <Button Content="Показать текущее состояние" Margin="8,0,0,0" Click="ShowTuningState_Click" Style="{StaticResource SecondaryButton}" />
                                 </WrapPanel>
-                                <TextBlock Text="Некоторые параметры перезапускают адаптер: соединение пропадёт на несколько секунд. Не применяйте их во время матча."
+                                <TextBlock Text="Галочка и пометка «включено» показывают, что пункт действует сейчас. Снять отдельный пункт нельзя, для этого есть кнопки отката ниже. Некоторые параметры перезапускают адаптер: соединение пропадёт на несколько секунд, не применяйте их во время матча."
                                            Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0" />
                             </StackPanel>
                         </Border>
