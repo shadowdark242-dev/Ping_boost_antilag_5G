@@ -142,15 +142,6 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBox x:Name="KeepAliveUrlTextBox" Text="https://www.google.com/generate_204"
                                                  Width="300" />
-                                        <TextBlock Text="Режим" VerticalAlignment="Center" Margin="14,0,7,0"
-                                                   Foreground="{StaticResource MutedBrush}" />
-                                        <ComboBox x:Name="KeepAliveModeComboBox" Width="150" SelectedIndex="0"
-                                                  VerticalContentAlignment="Center" SelectionChanged="KeepAliveMode_SelectionChanged">
-                                            <ComboBoxItem Content="Свой интервал" Tag="0" />
-                                            <ComboBoxItem Content="Эконом · 30 с" Tag="30" />
-                                            <ComboBoxItem Content="Обычный · 10 с" Tag="10" />
-                                            <ComboBoxItem Content="Интенсивный · 2 с" Tag="2" />
-                                        </ComboBox>
                                         <TextBlock Text="Интервал" VerticalAlignment="Center" Margin="14,0,7,0"
                                                    Foreground="{StaticResource MutedBrush}" />
                                         <ComboBox x:Name="KeepAliveIntervalComboBox" Width="105" SelectedIndex="2"
@@ -173,7 +164,7 @@
                                 </Grid>
                                 <TextBlock x:Name="KeepAliveStatusText" Text="Выключен. Запросы не отправляются."
                                            FontSize="11" Margin="0,10,0,0" />
-                                <TextBlock Text="Для чистого теста задержки после простоя остановите keepalive. Адрес должен быть HTTPS; используйте только доверенный endpoint. Интенсивный режим (2 с) расходует больше трафика и заряда."
+                                <TextBlock Text="Для чистого теста задержки после простоя остановите keepalive. Адрес должен быть HTTPS; используйте только доверенный endpoint. Интервал 2 с расходует больше трафика и заряда."
                                            Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
                         </Border>

@@ -468,17 +468,4 @@ public partial class MainWindow
         UdpStopButton.IsEnabled = false;
         UdpStatusText.Text = "Остановлено.";
     }
-
-    // ------------------------------------------------------------ keepalive mode
-
-    private void KeepAliveMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Fires during InitializeComponent, before the interval box exists.
-        if (KeepAliveIntervalComboBox is null)
-            return;
-        if (KeepAliveModeComboBox.SelectedItem is ComboBoxItem { Tag: string tag }
-            && int.TryParse(tag, out var seconds) && seconds > 0
-            && FindComboItemByTag(KeepAliveIntervalComboBox, seconds) is { } item)
-            KeepAliveIntervalComboBox.SelectedItem = item;
-    }
 }
