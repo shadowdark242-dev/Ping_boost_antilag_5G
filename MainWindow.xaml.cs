@@ -39,6 +39,8 @@ public partial class MainWindow : Window
     {
         _settings = _settingsService.Load();
         InitializeComponent();
+        if (Environment.ProcessPath is { } exePath && File.Exists(exePath))
+            Title += $" · сборка {File.GetLastWriteTime(exePath):yyyy-MM-dd HH:mm}";
         DataContext = this;
         Loaded += (_, _) =>
         {

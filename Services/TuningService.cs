@@ -726,7 +726,7 @@ public sealed class TuningService
                 lines.Add(sleep);
             var keywords = AdvancedTweaks.Values.SelectMany(map => map.Keys).Distinct().ToArray();
             foreach (var (keyword, prop) in await ReadAdvancedAsync(adapter, keywords))
-                lines.Add($"{keyword}: {prop.Value} (по умолчанию {prop.Default})");
+                lines.Add($"{keyword}: {prop.Value} (по умолчанию {prop.Default}; допустимо: {(prop.Valid.Count == 0 ? "—" : string.Join("/", prop.Valid))}; строк {prop.Rows}, значений {prop.Values})");
             using var iface = Registry.LocalMachine.OpenSubKey($@"{InterfacesPath}\{adapter.Guid}");
             foreach (var name in new[] { "TcpAckFrequency", "TCPNoDelay", "TcpDelAckTicks" })
                 lines.Add($"{name}: {FormatRegistry(iface?.GetValue(name))}");
@@ -750,7 +750,7 @@ public sealed class TuningService
 
     // ---------------------------------------------------------------- helpers
 
-    private sealed record AdvancedProperty(string Value, string Default, IReadOnlyList<string> Valid);
+    private sealed record AdvancedProperty(string Value, string Default, IReadOnlyList<string> Valid, int Rows, int Values);
 
     private static string KeywordPattern(string keyword) => keyword.Replace("*", "`*", StringComparison.Ordinal);
 
@@ -759,8 +759,8 @@ public sealed class TuningService
         var list = string.Join(",", keywords.Select(PowerShellRunner.Quote));
         var script =
             // -RegistryKeyword is a wildcard pattern: "*EEE" would also match "AdvancedEEE", so the star is escaped and the match re-checked exactly.
-            $"$r=@(); foreach($k in @({list})) {{ $kp=$k.Replace('*','`*'); $p=Get-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} -RegistryKeyword $kp -ErrorAction SilentlyContinue | Where-Object {{ $_.RegistryKeyword -eq $k }} | Select-Object -First 1; " +
-            "if($p){ $r += [pscustomobject]@{ k=$k; v=[string]($p.RegistryValue -join ','); d=[string]($p.DefaultRegistryValue -join ','); valid=@($p.ValidRegistryValues | ForEach-Object { [string]$_ }) } } }; " +
+            $"$r=@(); foreach($k in @({list})) {{ $kp=$k.Replace('*','`*'); $p=Get-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} -RegistryKeyword $kp -ErrorAction SilentlyContinue | Where-Object {{ $_.RegistryKeyword -eq $k }}; " +
+            "if($p){ $r += [pscustomobject]@{ k=$k; rows=@($p).Count; n=@($p.RegistryValue).Count; v=[string]($p.RegistryValue -join ','); d=[string]($p.DefaultRegistryValue -join ','); valid=@($p.ValidRegistryValues | ForEach-Object { [string]$_ }) } } }; " +
             "ConvertTo-Json -InputObject @($r) -Compress -Depth 4";
         var result = new Dictionary<string, AdvancedProperty>(StringComparer.OrdinalIgnoreCase);
         var output = await QueryAsync(script);
@@ -777,7 +777,9 @@ public sealed class TuningService
                 else if (validElement.ValueKind == JsonValueKind.String)
                     valid.Add(validElement.GetString() ?? string.Empty);
             }
-            result[Text(item, "k")] = new AdvancedProperty(Text(item, "v"), Text(item, "d"), valid);
+            _ = int.TryParse(Text(item, "rows"), out var rows);
+            _ = int.TryParse(Text(item, "n"), out var values);
+            result[Text(item, "k")] = new AdvancedProperty(Text(item, "v"), Text(item, "d"), valid, rows, values);
         }
         return result;
     }
