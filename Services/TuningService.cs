@@ -105,6 +105,8 @@ public sealed class TuningService
                 continue;
             }
 
+            // Even a partly failed tweak may have changed something, so the adapter is restarted afterwards.
+            adapterTouched |= definition.NeedsAdapter && id != "reg-tcpack";
             try
             {
                 var message = id switch
@@ -117,7 +119,6 @@ public sealed class TuningService
                     "tcp-timestamps" => await ApplyTimestampsAsync(),
                     _ => ApplyRegistry(RegistrySpecs(id, adapter))
                 };
-                adapterTouched |= definition.NeedsAdapter && id != "reg-tcpack";
                 log.Add($"✓ {definition.Title}: {message}");
             }
             catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or System.Security.SecurityException or JsonException or IOException or System.ComponentModel.Win32Exception)
@@ -298,9 +299,15 @@ public sealed class TuningService
                 notes.Add($"{keyword}: уже {wanted}");
                 continue;
             }
-            await RunAsync($"Set-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} " +
-                           $"-RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(wanted)} -NoRestart");
-            changed.Add(keyword);
+            try
+            {
+                await RunAsync(SetAdvancedScript(adapter.Name, keyword, wanted));
+                changed.Add(keyword);
+            }
+            catch (InvalidOperationException ex)
+            {
+                notes.Add($"{keyword}: не удалось записать ({ex.Message})");
+            }
         }
 
         if (changed.Count > 0)
@@ -609,7 +616,7 @@ public sealed class TuningService
                     }
                     log.Add($"— {name}: {keyword}: в копии было «{savedValue}», возвращаю значение драйвера по умолчанию «{value}»");
                 }
-                log.Add(await TryAsync($"{name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(value)} -NoRestart"));
+                log.Add(await TryAsync($"{name}: {keyword}", SetAdvancedScript(name, keyword, value)));
             }
             if (adapter.Lso is { } lso)
                 log.Add(await TryAsync($"{name}: LSO", LsoScript(quoted, lso)));
@@ -666,7 +673,7 @@ public sealed class TuningService
             foreach (var (keyword, prop) in await ReadAdvancedAsync(adapter, keywords))
             {
                 if (prop.Default.Length > 0 && prop.Default != prop.Value && !prop.Value.Contains(',') && !prop.Default.Contains(','))
-                    log.Add(await TryAsync($"{adapter.Name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(prop.Default)} -NoRestart"));
+                    log.Add(await TryAsync($"{adapter.Name}: {keyword}", SetAdvancedScript(adapter.Name, keyword, prop.Default)));
             }
             log.Add(ResetDeviceSleep(adapter));
             // Not every adapter supports LSO/RSC; enabling is attempted only where the feature exists.
@@ -802,7 +809,15 @@ public sealed class TuningService
 
     private sealed record AdvancedProperty(string Value, string Default, IReadOnlyList<string> Valid, int Rows, int Values);
 
-    private static string KeywordPattern(string keyword) => keyword.Replace("*", "`*", StringComparison.Ordinal);
+    /// <summary>
+    /// Writes one adapter property. The exact object is selected first (the keyword is a wildcard pattern for Get,
+    /// but Set-NetAdapterAdvancedProperty compares it literally) and passed down the pipeline.
+    /// </summary>
+    private static string SetAdvancedScript(string adapterName, string keyword, string value) =>
+        $"$k={PowerShellRunner.Quote(keyword)}; " +
+        $"$o=@(Get-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapterName)} -RegistryKeyword ($k.Replace('*','`*')) -ErrorAction SilentlyContinue | Where-Object {{ $_.RegistryKeyword -eq $k }}); " +
+        "if ($o.Count -ne 1) { throw \"Параметр $k найден строк: $($o.Count)\" }; " +
+        $"$o | Set-NetAdapterAdvancedProperty -RegistryValue {PowerShellRunner.Quote(value)} -NoRestart";
 
     private async Task<Dictionary<string, AdvancedProperty>> ReadAdvancedAsync(AdapterInfo adapter, IEnumerable<string> keywords)
     {
