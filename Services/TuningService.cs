@@ -254,7 +254,7 @@ public sealed class TuningService
                 continue;
             }
             await RunAsync($"Set-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} " +
-                           $"-RegistryKeyword {PowerShellRunner.Quote(keyword)} -RegistryValue {PowerShellRunner.Quote(wanted)} -NoRestart");
+                           $"-RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(wanted)} -NoRestart");
             changed.Add(keyword);
         }
 
@@ -549,8 +549,23 @@ public sealed class TuningService
         foreach (var (name, adapter) in _backup.Adapters)
         {
             var quoted = PowerShellRunner.Quote(name);
-            foreach (var (keyword, value) in adapter.Advanced)
-                log.Add(await TryAsync($"{name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(keyword)} -RegistryValue {PowerShellRunner.Quote(value)} -NoRestart"));
+            foreach (var (keyword, savedValue) in adapter.Advanced)
+            {
+                var value = savedValue;
+                if (value.Contains(','))
+                {
+                    // Backups made by an earlier build can hold several joined values (wildcard match); use the driver default for the exact keyword.
+                    var current = await ReadAdvancedAsync(new AdapterInfo(name, string.Empty, string.Empty), [keyword]);
+                    value = current.TryGetValue(keyword, out var property) ? property.Default : string.Empty;
+                    if (value.Length == 0 || value.Contains(','))
+                    {
+                        log.Add($"✗ {name}: {keyword}: не удалось определить исходное значение ({savedValue}), проверьте параметр вручную");
+                        continue;
+                    }
+                    log.Add($"— {name}: {keyword}: в копии было «{savedValue}», возвращаю значение драйвера по умолчанию «{value}»");
+                }
+                log.Add(await TryAsync($"{name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(value)} -NoRestart"));
+            }
             if (adapter.DeviceSleep is { } sleep)
                 log.Add(await TryAsync($"{name}: питание устройства", $"Set-NetAdapterPowerManagement -Name {quoted} -AllowComputerToTurnOffDevice {sleep} -NoRestart"));
             if (adapter.Lso is { } lso)
@@ -608,7 +623,7 @@ public sealed class TuningService
             foreach (var (keyword, prop) in await ReadAdvancedAsync(adapter, keywords))
             {
                 if (prop.Default.Length > 0 && prop.Default != prop.Value && !prop.Value.Contains(',') && !prop.Default.Contains(','))
-                    log.Add(await TryAsync($"{adapter.Name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(keyword)} -RegistryValue {PowerShellRunner.Quote(prop.Default)} -NoRestart"));
+                    log.Add(await TryAsync($"{adapter.Name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(prop.Default)} -NoRestart"));
             }
             log.Add(await TryAsync($"{adapter.Name}: питание устройства", $"Set-NetAdapterPowerManagement -Name {quoted} -AllowComputerToTurnOffDevice Enabled -NoRestart"));
             log.Add(await TryAsync($"{adapter.Name}: LSO", $"Enable-NetAdapterLso -Name {quoted} -NoRestart"));
@@ -737,11 +752,14 @@ public sealed class TuningService
 
     private sealed record AdvancedProperty(string Value, string Default, IReadOnlyList<string> Valid);
 
+    private static string KeywordPattern(string keyword) => keyword.Replace("*", "`*", StringComparison.Ordinal);
+
     private async Task<Dictionary<string, AdvancedProperty>> ReadAdvancedAsync(AdapterInfo adapter, IEnumerable<string> keywords)
     {
         var list = string.Join(",", keywords.Select(PowerShellRunner.Quote));
         var script =
-            $"$r=@(); foreach($k in @({list})) {{ $p=Get-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} -RegistryKeyword $k -ErrorAction SilentlyContinue; " +
+            // -RegistryKeyword is a wildcard pattern: "*EEE" would also match "AdvancedEEE", so the star is escaped and the match re-checked exactly.
+            $"$r=@(); foreach($k in @({list})) {{ $kp=$k.Replace('*','`*'); $p=Get-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} -RegistryKeyword $kp -ErrorAction SilentlyContinue | Where-Object {{ $_.RegistryKeyword -eq $k }} | Select-Object -First 1; " +
             "if($p){ $r += [pscustomobject]@{ k=$k; v=[string]($p.RegistryValue -join ','); d=[string]($p.DefaultRegistryValue -join ','); valid=@($p.ValidRegistryValues | ForEach-Object { [string]$_ }) } } }; " +
             "ConvertTo-Json -InputObject @($r) -Compress -Depth 4";
         var result = new Dictionary<string, AdvancedProperty>(StringComparer.OrdinalIgnoreCase);
