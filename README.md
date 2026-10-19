@@ -11,10 +11,15 @@ A Windows application for diagnosing network quality. The interface uses a clean
 - Runs an ICMP traceroute with one probe per TTL step, up to 24 hops.
 - Compares ping immediately after network activity with ping after a selected idle period (5, 15, 30, or 60 seconds; five cycles).
 - Runs a paired A/B experiment with and without HTTPS keepalive at the same idle interval, reporting average and median RTT changes.
-- Records a gameplay session with sequential ICMP probes to the local gateway and an external host, manual gameplay/loss markers, and a separate CSV export.
-- Adds session snapshots for system CPU/memory and Windows network-interface error/discard counters, plus automatic event markers.
-- Can list IPv4 UDP local endpoints owned by a selected game process; it does not inspect payloads or identify remote UDP peers.
-- Captures repeated traceroute snapshots and compares responding hops to show route changes.
+- **Optimization tab** (requires administrator rights; no driver is installed, everything uses documented PowerShell cmdlets and registry values):
+  - adapter tweaks: disable adapter power saving, Interrupt Moderation, Energy-Efficient/Green Ethernet, Large Send Offload and Receive Segment Coalescing, lowest Wi-Fi roaming aggressiveness (only settings the driver actually exposes are touched);
+  - TCP Optimizer-style system tweaks: TCP timestamps, global RSC, per-adapter `TcpAckFrequency`/`TCPNoDelay`, MMCSS network throttling and Games task priority, QoS bandwidth reservation;
+  - MTU probe (largest IPv4 packet that passes without fragmentation) with an optional apply step;
+  - Windows QoS policy that marks the selected game's outgoing UDP traffic with a DSCP value;
+  - game mode: High process priority, High performance power plan and temporary pause of Windows Update/BITS/Delivery Optimization;
+  - **restore buttons**: "Restore state from before PingBoost" (uses a backup saved before the first change) and "Reset to Windows defaults" (sets documented defaults for every managed setting, even without a backup).
+- **UDP monitor tab** (administrator rights): passive per-remote-endpoint UDP statistics for the game process from the Windows kernel ETW network provider - packet counts, receive rate and the longest gap between received packets over 10 seconds. Only addresses, ports, sizes and timing are read.
+- Keepalive modes (Eco 30 s, Normal 10 s, Intensive 2 s, or a custom interval).
 - Stores Russian/English UI preference, current-user Windows startup setting, and per-game diagnostic profiles as JSON under the user's LocalAppData folder.
 - Provides an opt-in HTTPS keepalive with a configurable interval and request/response-body counters.
 - Opens the official Waveform Bufferbloat Test after a separate confirmation. Waveform displays idle/download/upload latency, jitter, and its A+–F grade.
@@ -24,15 +29,14 @@ A Windows application for diagnosing network quality. The interface uses a clean
 
 ## Limitations and safety
 
-- This is a diagnostic tool. It does not promise to reduce ping and does not change routes, DNS, application priorities, or adapter settings.
+- Measurements never change the system. The Optimization tab changes settings only after an explicit confirmation, stores the original values in `%LOCALAPPDATA%\PingBoost\tuning-backup.json`, and does not promise a lower ping.
+- Without a relay server PingBoost cannot reroute or duplicate game packets (what ExitLag/GearUP do); it only tunes the local part of the path: adapter, Windows network stack, Wi-Fi and cellular behavior.
+- Some adapter settings restart the adapter and drop the connection for a few seconds. DSCP marks may be cleared by a mobile carrier or a phone hotspot. Adapter keywords differ between drivers; unsupported ones are skipped.
+- The UDP monitor attributes packets to a process through the UDP owner table (local port -> PID). It does not prove which packets the game lost; a long receive gap shows that nothing arrived from the server for that time.
 - Measurements use the Windows system route. Adapter details are informational; probes are not currently bound to a specific adapter.
 - ICMP may be filtered by a server or network and does not always reflect game UDP latency. A traceroute hop may not reply even while forwarding traffic.
 - Reported “loss” is the share of ICMP probes with no reply, not confirmed loss of game packets.
-- Gameplay session markers are manually timestamped and ICMP probes do not capture or identify the game's UDP packets. A missing gateway reply and a missing external reply can help narrow down where to investigate, but are not definitive proof of in-game packet loss.
-- Process UDP inspection uses the Windows IPv4 owner-PID table and reports local endpoints only. UDP does not have a connection table containing the remote peer; IPv6 endpoints and exact game-server identification are not currently included.
-- Route snapshots use ICMP traceroute and are manual. A snapshot can take up to about 22 seconds, during which the session's regular probes pause.
-- System snapshots use built-in Windows CPU, memory, and adapter counters. Adapter error/discard counters are cumulative and may not indicate game-specific loss.
-- Per-game profiles store diagnostic parameters only. They do not alter the game's routes or traffic. Startup registration applies to the current Windows user.
+- Per-game profiles store diagnostic parameters and the process name used by the Optimization and UDP monitor tabs. Startup registration applies to the current Windows user.
 - The idle test measures RTT changes after a pause but cannot determine the LTE/5G radio state by itself. The sequential A/B comparison is short and can be affected by changing cellular conditions.
 - Keepalive sends HTTPS GET requests to the user-selected endpoint (default: `https://www.google.com/generate_204`). It may not keep a particular operator's radio connection active. The response-body counter excludes TLS, IP, and radio-protocol overhead. Stop keepalive when the experiment is complete.
 - The bufferbloat test runs on the official Waveform site in a browser, not inside PingBoost. It may nearly saturate the link, temporarily slow other devices, and use mobile data; the app always asks for confirmation first.
@@ -51,11 +55,13 @@ dotnet build .\PingBoost.csproj
 dotnet run --project .\PingBoost.csproj
 ```
 
-The project was verified with .NET SDK 8.0.426: build completed with no warnings or errors.
+Restoring NuGet packages requires internet access once (`Microsoft.Diagnostics.Tracing.TraceEvent` for the UDP monitor). Run the app as administrator to use the Optimization and UDP monitor tabs; the app offers a restart button.
+
+The latest changes were compile-checked against the WPF reference assemblies on Linux; they have not yet been run on Windows, so test them on a non-critical session first and keep the restore buttons in mind.
 
 ## Next steps
 
-1. Manually test multiple targets, stopping, timeouts, traceroute, baseline comparison, and CSV export.
-2. Improve saving/loading test profiles and add comparison-report export.
-3. Design a bufferbloat measurement separately. Any traffic-generating test should be opt-in, clearly warned, and bounded.
+1. Test the Optimization tab on the target machine, one tweak at a time, comparing results with the before/after tools; verify both restore buttons.
+2. Verify the UDP monitor against a real game session and compare receive gaps with felt lag.
+3. Add comparison-report export and more game profile presets.
 4. Consider a private relay only if measurements show that changing routes may help.

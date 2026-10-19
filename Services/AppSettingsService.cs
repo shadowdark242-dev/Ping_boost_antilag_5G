@@ -16,8 +16,6 @@ public sealed class GameProfile
     public string Name { get; set; } = "";
     public string ProcessName { get; set; } = "";
     public string MonitorTargets { get; set; } = "1.1.1.1\n8.8.8.8";
-    public string SessionGateway { get; set; } = "";
-    public string SessionRemote { get; set; } = "1.1.1.1";
     public string IdleTarget { get; set; } = "1.1.1.1";
     public int IdleSeconds { get; set; } = 15;
     public string KeepAliveUrl { get; set; } = "https://www.google.com/generate_204";

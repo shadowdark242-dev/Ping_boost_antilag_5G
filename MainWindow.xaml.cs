@@ -23,26 +23,17 @@ public partial class MainWindow : Window
     private AppSettings _settings;
     private readonly NetworkMonitor _monitor = new();
     private readonly RouteTraceService _routeTrace = new();
-    private readonly SystemSnapshotService _systemSnapshots = new();
     private readonly List<PingSample> _samples = [];
     private readonly Dictionary<string, BaselineSnapshot> _baseline = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HttpClient KeepAliveClient = new() { Timeout = TimeSpan.FromSeconds(8) };
     private CancellationTokenSource? _monitoringCancellation;
     private CancellationTokenSource? _idleTestCancellation;
     private CancellationTokenSource? _keepAliveCancellation;
-    private CancellationTokenSource? _sessionCancellation;
-    private readonly List<GameSessionEntry> _sessionEntries = [];
-    private readonly List<string> _sessionRouteBaseline = [];
     private bool _loadingProfiles = true;
-    private string _lastGameEndpoints = string.Empty;
-    private bool _cpuHighMarkerActive;
-    private bool _memoryLowMarkerActive;
-    private SystemSnapshot? _previousSystemSnapshot;
 
     public ObservableCollection<TargetRow> TargetRows { get; } = [];
     public ObservableCollection<RouteHopRow> RouteRows { get; } = [];
     public ObservableCollection<IdleLatencyRow> IdleRows { get; } = [];
-    public ObservableCollection<GameSessionRow> SessionRows { get; } = [];
 
     public MainWindow()
     {
@@ -53,6 +44,7 @@ public partial class MainWindow : Window
         {
             RefreshAdapters();
             LoadProfiles();
+            InitializeTuning();
             LocalizationService.Apply(this, _settings.Language);
         };
         ChartCanvas.SizeChanged += (_, _) => DrawChart();
@@ -61,7 +53,7 @@ public partial class MainWindow : Window
             _monitoringCancellation?.Cancel();
             _idleTestCancellation?.Cancel();
             _keepAliveCancellation?.Cancel();
-            _sessionCancellation?.Cancel();
+            ShutdownTuning();
         };
     }
 
@@ -72,8 +64,6 @@ public partial class MainWindow : Window
         Name = "Current configuration",
         ProcessName = GameProcessComboBox.Text.Trim(),
         MonitorTargets = TargetsTextBox.Text,
-        SessionGateway = SessionGatewayTextBox.Text.Trim(),
-        SessionRemote = SessionRemoteTextBox.Text.Trim(),
         IdleTarget = IdleTargetTextBox.Text.Trim(),
         IdleSeconds = GetSelectedSeconds(IdleIntervalComboBox, 15),
         KeepAliveUrl = KeepAliveUrlTextBox.Text.Trim(),
@@ -118,15 +108,13 @@ public partial class MainWindow : Window
         try { _settingsService.Save(_settings); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SessionStatusText.Text = $"Не удалось сохранить выбранный профиль: {ex.Message}";
+            GameStatusText.Text = $"Не удалось сохранить выбранный профиль: {ex.Message}";
         }
     }
 
     private void ApplyProfile(GameProfile profile)
     {
         TargetsTextBox.Text = profile.MonitorTargets;
-        SessionGatewayTextBox.Text = profile.SessionGateway;
-        SessionRemoteTextBox.Text = profile.SessionRemote;
         IdleTargetTextBox.Text = profile.IdleTarget;
         IdleIntervalComboBox.SelectedItem = FindComboItemByTag(IdleIntervalComboBox, profile.IdleSeconds);
         KeepAliveUrlTextBox.Text = profile.KeepAliveUrl;
@@ -153,7 +141,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or DllNotFoundException or EntryPointNotFoundException)
         {
-            SessionStatusText.Text = $"Не удалось получить список игровых процессов с UDP endpoint: {ex.Message}";
+            GameStatusText.Text = $"Не удалось получить список игровых процессов с UDP endpoint: {ex.Message}";
         }
     }
 
@@ -161,17 +149,6 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(SessionGatewayTextBox.Text))
-            {
-                var gateway = NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up)
-                    .SelectMany(adapter => adapter.GetIPProperties().GatewayAddresses)
-                    .Select(entry => entry.Address)
-                    .FirstOrDefault(address => !address.Equals(IPAddress.Any) && !address.Equals(IPAddress.IPv6Any));
-                if (gateway is not null)
-                    SessionGatewayTextBox.Text = gateway.ToString();
-            }
-
             var adapters = _monitor.GetActiveAdapters();
             AdapterText.Text = adapters.Count == 0
                 ? "Активные сетевые адаптеры не найдены."
@@ -185,12 +162,6 @@ public partial class MainWindow : Window
 
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
-        if (_sessionCancellation is not null)
-        {
-            ComparisonText.Text = "Остановите запись игровой сессии перед запуском другого мониторинга.";
-            return;
-        }
-
         var targets = ParseTargets(TargetsTextBox.Text);
         if (targets.Count == 0 || targets.Any(target => !IsPlausibleHost(target)))
         {
@@ -241,229 +212,6 @@ public partial class MainWindow : Window
 
     private void Stop_Click(object sender, RoutedEventArgs e) => _monitoringCancellation?.Cancel();
 
-    private async void StartSession_Click(object sender, RoutedEventArgs e)
-    {
-        var gateway = SessionGatewayTextBox.Text.Trim();
-        var remote = SessionRemoteTextBox.Text.Trim();
-        if (!IsPlausibleHost(gateway) || !IsPlausibleHost(remote))
-        {
-            SessionStatusText.Text = "Укажите корректный адрес шлюза и внешний IP-адрес или DNS-имя.";
-            return;
-        }
-        if (_monitoringCancellation is not null || _idleTestCancellation is not null || _keepAliveCancellation is not null)
-        {
-            SessionStatusText.Text = "Сначала остановите другие измерения и keepalive, чтобы запись сессии была понятнее.";
-            return;
-        }
-
-        _sessionEntries.Clear();
-        SessionRows.Clear();
-        _sessionRouteBaseline.Clear();
-        _lastGameEndpoints = string.Empty;
-        _cpuHighMarkerActive = false;
-        _memoryLowMarkerActive = false;
-        _previousSystemSnapshot = _systemSnapshots.Read();
-        try { RefreshGameProcesses(); }
-        catch (Exception ex) { SessionStatusText.Text = $"Запись запущена; список процессов недоступен: {ex.Message}"; }
-        _sessionCancellation = new CancellationTokenSource();
-        var cancellation = _sessionCancellation;
-        SessionGatewayTextBox.IsEnabled = false;
-        SessionRemoteTextBox.IsEnabled = false;
-        StartSessionButton.IsEnabled = false;
-        StopSessionButton.IsEnabled = true;
-        ExportSessionButton.IsEnabled = false;
-        SessionStatusText.Text = "Запись идёт: шлюз и внешний узел проверяются последовательно; интервал зависит от времени ответа целей.";
-        try
-        {
-            while (true)
-            {
-                cancellation.Token.ThrowIfCancellationRequested();
-                await RecordSessionProbeAsync(gateway, cancellation.Token);
-                await RecordSessionProbeAsync(remote, cancellation.Token);
-                RecordSystemAndGameEvents();
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellation.Token);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            SessionStatusText.Text = $"Запись остановлена · событий и проб: {_sessionEntries.Count}. Экспортируйте CSV для анализа.";
-        }
-        catch (Exception ex)
-        {
-            SessionStatusText.Text = $"Ошибка записи: {ex.Message}";
-        }
-        finally
-        {
-            cancellation.Dispose();
-            _sessionCancellation = null;
-            SessionGatewayTextBox.IsEnabled = true;
-            SessionRemoteTextBox.IsEnabled = true;
-            StartSessionButton.IsEnabled = true;
-            StopSessionButton.IsEnabled = false;
-            ExportSessionButton.IsEnabled = _sessionEntries.Count > 0;
-        }
-    }
-
-    private async Task RecordSessionProbeAsync(string target, CancellationToken cancellationToken)
-    {
-        var sample = await _monitor.MeasureAsync(target, cancellationToken);
-        var label = target.Equals(SessionGatewayTextBox.Text.Trim(), StringComparison.OrdinalIgnoreCase)
-            ? "Шлюз"
-            : "Внешний узел";
-        AddSessionEntry(new GameSessionEntry(sample.Timestamp, "probe", label, target, sample.LatencyMilliseconds, sample.Status),
-            $"{label} · {target}", FormatMilliseconds(sample.LatencyMilliseconds), sample.Status);
-        SessionStatusText.Text = $"Запись идёт · проб: {_sessionEntries.Count} · последний результат: {label} — {FormatMilliseconds(sample.LatencyMilliseconds)} ({sample.Status}).";
-    }
-
-    private void RecordSystemAndGameEvents()
-    {
-        var current = _systemSnapshots.Read();
-        var memoryGb = current.AvailableMemoryBytes / 1_000_000_000d;
-        AddSessionEntry(
-            new GameSessionEntry(DateTimeOffset.Now, "system", "System snapshot", string.Empty, null, ""),
-            "Система: CPU / свободная память / ошибки / отбросы",
-            "—",
-            $"CPU {current.CpuPercent:0}% · RAM free {memoryGb:0.0} GB · NIC errors {current.NetworkErrors} · discards {current.NetworkDiscards}");
-        if (current.CpuPercent >= 85 && !_cpuHighMarkerActive)
-            AddAutomaticMarker($"Высокая загрузка CPU: {current.CpuPercent:0}%");
-        _cpuHighMarkerActive = current.CpuPercent >= 85;
-
-        var memoryLow = current.AvailableMemoryBytes < 1_000_000_000;
-        if (memoryLow && !_memoryLowMarkerActive)
-            AddAutomaticMarker($"Мало свободной физической памяти: {current.AvailableMemoryBytes / 1_000_000_000d:0.0} GB");
-        _memoryLowMarkerActive = memoryLow;
-
-        if (_previousSystemSnapshot is { } previous)
-        {
-            if (current.NetworkErrors > previous.NetworkErrors)
-                AddAutomaticMarker($"Счётчик ошибок сетевых адаптеров увеличился: +{current.NetworkErrors - previous.NetworkErrors}");
-            if (current.NetworkDiscards > previous.NetworkDiscards)
-                AddAutomaticMarker($"Счётчик отброшенных пакетов адаптеров увеличился: +{current.NetworkDiscards - previous.NetworkDiscards}");
-        }
-        _previousSystemSnapshot = current;
-
-        var processName = System.IO.Path.GetFileNameWithoutExtension(GameProcessComboBox.Text.Trim());
-        if (processName.Length == 0)
-            return;
-        string[] matchingEndpoints;
-        try
-        {
-            matchingEndpoints = GameProcessService.GetUdpEndpoints()
-                .Where(endpoint => endpoint.ProcessName.Equals(processName, StringComparison.OrdinalIgnoreCase))
-                .Select(endpoint => $"{endpoint.ProcessName}:{endpoint.LocalAddress}:{endpoint.LocalPort}")
-                .Order(StringComparer.OrdinalIgnoreCase).ToArray();
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or DllNotFoundException or EntryPointNotFoundException)
-        {
-            AddAutomaticMarker($"Не удалось получить список UDP endpoints: {ex.Message}");
-            return;
-        }
-        var signature = string.Join("|", matchingEndpoints);
-        if (signature != _lastGameEndpoints)
-        {
-            var summary = matchingEndpoints.Length == 0
-                ? $"У процесса {processName} сейчас не обнаружены IPv4 UDP endpoints"
-                : $"UDP endpoints процесса {processName} (локальные адреса/порты): {string.Join(", ", matchingEndpoints)}";
-            AddAutomaticMarker(summary);
-            _lastGameEndpoints = signature;
-        }
-    }
-
-    private void AddAutomaticMarker(string message) =>
-        AddSessionEntry(new GameSessionEntry(DateTimeOffset.Now, "auto", message, string.Empty, null, "automatic event"), message, "—", "Автометка");
-
-    private void AddSessionEntry(GameSessionEntry entry, string label, string latency, string status)
-    {
-        _sessionEntries.Add(entry);
-        SessionRows.Add(new GameSessionRow(entry.Timestamp.ToLocalTime().ToString("HH:mm:ss.fff"), label, latency, status));
-        while (SessionRows.Count > 250)
-            SessionRows.RemoveAt(0);
-    }
-
-    private async void CaptureSessionRoutes_Click(object sender, RoutedEventArgs e)
-    {
-        if (_sessionCancellation is null)
-        {
-            SessionStatusText.Text = "Начните запись игровой сессии, чтобы сохранять и сравнивать снимки маршрута.";
-            return;
-        }
-        var host = SessionRemoteTextBox.Text.Trim();
-        if (!IsPlausibleHost(host))
-        {
-            SessionStatusText.Text = "Укажите корректную внешнюю цель перед проверкой маршрута.";
-            return;
-        }
-        CaptureSessionRoutesButton.IsEnabled = false;
-        SessionStatusText.Text = "Traceroute может занять до 22 секунд; ICMP-запись на это время будет приостановлена.";
-        try
-        {
-            var hops = new List<RouteHopResult>();
-            var progress = new InlineProgress<RouteHopResult>(hops.Add);
-            await _routeTrace.TraceAsync(host, progress, CancellationToken.None);
-            var signature = hops.Where(hop => hop.Address != "*").Select(hop => hop.Address).ToList();
-            var routeText = signature.Count == 0 ? "нет отвечающих узлов" : string.Join(" → ", signature);
-            if (_sessionRouteBaseline.Count == 0)
-            {
-                _sessionRouteBaseline.AddRange(signature);
-                AddAutomaticMarker($"Снимок исходного маршрута до {host}: {routeText}");
-                SessionStatusText.Text = "Исходный маршрут сохранён. Повторите снимок позже, чтобы сравнить маршрут.";
-            }
-            else
-            {
-                var changed = !_sessionRouteBaseline.SequenceEqual(signature, StringComparer.OrdinalIgnoreCase);
-                AddAutomaticMarker($"Маршрут до {host} {(changed ? "изменился" : "совпал")}: {routeText}");
-                SessionStatusText.Text = changed
-                    ? "Маршрут отличается от первого снимка; подробности записаны в сессию."
-                    : "Отвечающие узлы маршрута совпадают с первым снимком.";
-            }
-        }
-        catch (Exception ex)
-        {
-            SessionStatusText.Text = $"Ошибка traceroute: {ex.Message}";
-        }
-        finally
-        {
-            CaptureSessionRoutesButton.IsEnabled = true;
-        }
-    }
-
-    private void AddSessionMarker(string marker)
-    {
-        if (_sessionCancellation is null)
-        {
-            SessionStatusText.Text = "Чтобы поставить маркер, сначала начните запись сессии.";
-            return;
-        }
-        var entry = new GameSessionEntry(DateTimeOffset.Now, "marker", marker, string.Empty, null, "user marker");
-        _sessionEntries.Add(entry);
-        SessionRows.Add(new GameSessionRow(entry.Timestamp.ToLocalTime().ToString("HH:mm:ss.fff"), marker, "—", "Маркер"));
-        while (SessionRows.Count > 250)
-            SessionRows.RemoveAt(0);
-    }
-
-    private void SessionCalm_Click(object sender, RoutedEventArgs e) => AddSessionMarker("Спокойно");
-    private void SessionCombat_Click(object sender, RoutedEventArgs e) => AddSessionMarker("Начался бой");
-    private void SessionLoss_Click(object sender, RoutedEventArgs e) => AddSessionMarker("Заметил потери");
-    private void StopSession_Click(object sender, RoutedEventArgs e) => _sessionCancellation?.Cancel();
-
-    private void ExportSession_Click(object sender, RoutedEventArgs e)
-    {
-        if (_sessionEntries.Count == 0)
-            return;
-        var dialog = new SaveFileDialog { Filter = "CSV files (*.csv)|*.csv", DefaultExt = ".csv", AddExtension = true, FileName = $"pingboost-session-{DateTime.Now:yyyyMMdd-HHmmss}.csv" };
-        if (dialog.ShowDialog(this) != true)
-            return;
-        try
-        {
-            CsvReportService.ExportSession(dialog.FileName, _sessionEntries);
-            SessionStatusText.Text = $"CSV сессии сохранён: {dialog.FileName}";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            SessionStatusText.Text = $"Не удалось сохранить CSV: {ex.Message}";
-        }
-    }
-
     private async void IdleTest_Click(object sender, RoutedEventArgs e)
     {
         await RunIdleExperimentAsync(compareWithKeepAlive: false);
@@ -483,7 +231,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_monitoringCancellation is not null || _keepAliveCancellation is not null || _sessionCancellation is not null)
+        if (_monitoringCancellation is not null || _keepAliveCancellation is not null)
         {
             IdleTestSummaryText.Text = "Остановите основной мониторинг и keepalive перед тестом простоя, чтобы не искажать результат.";
             return;
@@ -675,7 +423,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_idleTestCancellation is not null || _sessionCancellation is not null || _monitoringCancellation is not null)
+        if (_idleTestCancellation is not null || _monitoringCancellation is not null)
         {
             KeepAliveStatusText.Text = "Сначала остановите тест задержки после простоя.";
             return;
@@ -1162,16 +910,6 @@ public sealed record RouteHopRow(int Hop, string Address, string LatencyText, st
 public sealed record BaselineSnapshot(TargetStatistics Statistics, DateTimeOffset CapturedAt);
 
 public sealed record IdleLatencyRow(string Mode, string Round, string WarmText, string IdleText, string DeltaText);
-
-public sealed record GameSessionEntry(
-    DateTimeOffset Timestamp,
-    string Type,
-    string Label,
-    string Target,
-    long? LatencyMilliseconds,
-    string Status);
-
-public sealed record GameSessionRow(string TimeText, string Label, string LatencyText, string Status);
 
 public sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
 {

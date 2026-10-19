@@ -55,8 +55,6 @@ public partial class SettingsWindow : Window
         ProfileNameTextBox.Text = profile.Name;
         ProcessNameTextBox.Text = profile.ProcessName;
         MonitorTargetsTextBox.Text = profile.MonitorTargets;
-        GatewayTextBox.Text = profile.SessionGateway;
-        RemoteTextBox.Text = profile.SessionRemote;
         IdleTargetTextBox.Text = profile.IdleTarget;
         IdleSecondsTextBox.Text = profile.IdleSeconds.ToString();
         KeepAliveUrlTextBox.Text = profile.KeepAliveUrl;
@@ -79,8 +77,6 @@ public partial class SettingsWindow : Window
         Name = value.Name,
         ProcessName = value.ProcessName,
         MonitorTargets = value.MonitorTargets,
-        SessionGateway = value.SessionGateway,
-        SessionRemote = value.SessionRemote,
         IdleTarget = value.IdleTarget,
         IdleSeconds = value.IdleSeconds,
         KeepAliveUrl = value.KeepAliveUrl,
@@ -127,16 +123,14 @@ public partial class SettingsWindow : Window
     private bool UpdateProfileFromFields(GameProfile profile)
     {
         if (!int.TryParse(IdleSecondsTextBox.Text, out var idleSeconds) || idleSeconds is not (5 or 15 or 30 or 60)
-            || !int.TryParse(KeepAliveSecondsTextBox.Text, out var keepAliveSeconds) || keepAliveSeconds is not (5 or 10 or 20 or 30 or 60))
+            || !int.TryParse(KeepAliveSecondsTextBox.Text, out var keepAliveSeconds) || keepAliveSeconds is not (2 or 5 or 10 or 20 or 30 or 60))
         {
-            MessageBox.Show(this, "Выберите поддерживаемые значения: пауза 5/15/30/60 секунд, keepalive 5/10/20/30/60 секунд.", "Некорректные параметры", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, "Выберите поддерживаемые значения: пауза 5/15/30/60 секунд, keepalive 2/5/10/20/30/60 секунд.", "Некорректные параметры", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         profile.Name = string.IsNullOrWhiteSpace(ProfileNameTextBox.Text) ? "Game profile" : ProfileNameTextBox.Text.Trim();
         profile.ProcessName = ProcessNameTextBox.Text.Trim();
         profile.MonitorTargets = MonitorTargetsTextBox.Text.Trim();
-        profile.SessionGateway = GatewayTextBox.Text.Trim();
-        profile.SessionRemote = RemoteTextBox.Text.Trim();
         profile.IdleTarget = IdleTargetTextBox.Text.Trim();
         profile.IdleSeconds = idleSeconds;
         profile.KeepAliveUrl = KeepAliveUrlTextBox.Text.Trim();

@@ -6,19 +6,6 @@ namespace PingBoost.Services;
 
 public static class CsvReportService
 {
-    public static void ExportSession(string path, IEnumerable<GameSessionEntry> entries)
-    {
-        using var writer = new StreamWriter(path, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-        writer.WriteLine("timestamp_local,type,event,target,latency_ms,status");
-        foreach (var entry in entries)
-        {
-            var timestamp = entry.Timestamp.ToLocalTime().ToString("O", CultureInfo.InvariantCulture);
-            var latency = entry.LatencyMilliseconds?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-            writer.WriteLine(string.Join(",", Escape(timestamp), Escape(entry.Type), Escape(entry.Label),
-                Escape(entry.Target), Escape(latency), Escape(entry.Status)));
-        }
-    }
-
     public static void Export(string path, IEnumerable<PingSample> samples)
     {
         using var writer = new StreamWriter(path, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));

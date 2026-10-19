@@ -21,7 +21,7 @@
                 </ComboBox>
             </StackPanel>
             <CheckBox x:Name="StartupCheckBox" Content="Запускать вместе с Windows (текущий пользователь)" Margin="0,12,0,0" />
-            <TextBlock Text="Профили игр сохраняются локально и содержат параметры целей, записи сессии, теста простоя и keepalive. Профиль не меняет маршрутизацию игрового трафика."
+            <TextBlock Text="Профили игр сохраняются локально и содержат параметры целей, теста простоя и keepalive. Профиль не меняет маршрутизацию игрового трафика."
                        TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,0" />
         </StackPanel>
         <Grid Grid.Row="2">
@@ -42,10 +42,6 @@
                 <TextBox x:Name="ProcessNameTextBox" Margin="0,4,0,8" />
                 <TextBlock Text="Цели мониторинга (по одной на строку)" />
                 <TextBox x:Name="MonitorTargetsTextBox" Height="55" AcceptsReturn="True" TextWrapping="Wrap" Margin="0,4,0,8" />
-                <TextBlock Text="Шлюз hotspot / роутера" />
-                <TextBox x:Name="GatewayTextBox" Margin="0,4,0,8" />
-                <TextBlock Text="Внешняя цель записи сессии" />
-                <TextBox x:Name="RemoteTextBox" Margin="0,4,0,8" />
                 <TextBlock Text="Цель теста после простоя" />
                 <TextBox x:Name="IdleTargetTextBox" Margin="0,4,0,8" />
                 <TextBlock Text="Пауза теста простоя (секунды)" />

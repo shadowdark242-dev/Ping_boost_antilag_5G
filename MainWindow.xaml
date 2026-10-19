@@ -114,59 +114,17 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="ЗАПИСЬ ИГРОВОЙ СЕССИИ" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Параллельно проверяет локальный шлюз и внешний узел, чтобы понять, где возникают задержки или пропуски ICMP. Во время игры отмечайте события кнопками ниже. Это диагностические ICMP-пробы, не захват игровых UDP-пакетов."
+                                <TextBlock Text="ПРОФИЛЬ ИГРЫ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Профиль хранит цели, параметры теста простоя и keepalive. Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор»."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
-                                <TextBlock Text="Сессия также отмечает доступные системные события и IPv4 UDP локальные порты выбранного процесса. Снимок маршрута — ручной traceroute; на время снимка обычные пробы приостанавливаются."
-                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10" />
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="170" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="170" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Шлюз" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
-                                    <TextBox x:Name="SessionGatewayTextBox" Grid.Column="1" />
-                                    <TextBlock Text="Внешний узел" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="12,0,7,0" />
-                                    <TextBox x:Name="SessionRemoteTextBox" Grid.Column="3" Text="1.1.1.1" />
-                                    <Button x:Name="StartSessionButton" Grid.Column="4" Content="Начать запись" Margin="12,0,0,0" Click="StartSession_Click" />
-                                    <Button x:Name="StopSessionButton" Grid.Column="5" Content="Остановить" Margin="8,0,0,0" IsEnabled="False" Click="StopSession_Click"
-                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
-                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
-                                </Grid>
-                                <WrapPanel Margin="0,9,0,0" VerticalAlignment="Center">
+                                <WrapPanel VerticalAlignment="Center">
                                     <TextBlock Text="Профиль" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
                                     <ComboBox x:Name="GameProfileComboBox" Width="190" DisplayMemberPath="Name" SelectionChanged="GameProfile_SelectionChanged" />
-                                    <Button x:Name="CaptureSessionRoutesButton" Content="Снять / сравнить маршруты" Margin="8,0,0,0" Click="CaptureSessionRoutes_Click"
-                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
-                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
                                     <TextBlock Text="Процесс" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="14,0,7,0" />
                                     <ComboBox x:Name="GameProcessComboBox" Width="180" IsEditable="True" ToolTip="Имя процесса без .exe" />
-                                    <Button Content="Обновить" Margin="6,0,0,0" Click="RefreshProcesses_Click"
-                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
-                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+                                    <Button Content="Обновить" Margin="6,0,0,0" Click="RefreshProcesses_Click" Style="{StaticResource SecondaryButton}" />
                                 </WrapPanel>
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Button Content="Спокойно" Click="SessionCalm_Click" />
-                                    <Button Content="Начался бой" Margin="8,0,0,0" Click="SessionCombat_Click" />
-                                    <Button Content="Заметил потери" Margin="8,0,0,0" Click="SessionLoss_Click" />
-                                    <Button x:Name="ExportSessionButton" Content="Экспорт сессии CSV" Margin="8,0,0,0" IsEnabled="False" Click="ExportSession_Click"
-                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
-                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
-                                </WrapPanel>
-                                <TextBlock x:Name="SessionStatusText" Text="Запись остановлена. Маркеры можно ставить только во время записи."
-                                           FontSize="11" Margin="0,9,0,0" />
-                                <DataGrid ItemsSource="{Binding SessionRows}" MinHeight="95" MaxHeight="160" Margin="0,8,0,0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Время" Binding="{Binding TimeText}" Width="130" />
-                                        <DataGridTextColumn Header="Событие / цель" Binding="{Binding Label}" Width="*" />
-                                        <DataGridTextColumn Header="Ping" Binding="{Binding LatencyText}" Width="95" />
-                                        <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <TextBlock x:Name="GameStatusText" Text="" FontSize="11" Margin="0,9,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 
@@ -183,11 +141,21 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBox x:Name="KeepAliveUrlTextBox" Text="https://www.google.com/generate_204"
-                                                 Width="360" />
+                                                 Width="300" />
+                                        <TextBlock Text="Режим" VerticalAlignment="Center" Margin="14,0,7,0"
+                                                   Foreground="{StaticResource MutedBrush}" />
+                                        <ComboBox x:Name="KeepAliveModeComboBox" Width="150" SelectedIndex="0"
+                                                  VerticalContentAlignment="Center" SelectionChanged="KeepAliveMode_SelectionChanged">
+                                            <ComboBoxItem Content="Свой интервал" Tag="0" />
+                                            <ComboBoxItem Content="Эконом · 30 с" Tag="30" />
+                                            <ComboBoxItem Content="Обычный · 10 с" Tag="10" />
+                                            <ComboBoxItem Content="Интенсивный · 2 с" Tag="2" />
+                                        </ComboBox>
                                         <TextBlock Text="Интервал" VerticalAlignment="Center" Margin="14,0,7,0"
                                                    Foreground="{StaticResource MutedBrush}" />
-                                        <ComboBox x:Name="KeepAliveIntervalComboBox" Width="105" SelectedIndex="1"
+                                        <ComboBox x:Name="KeepAliveIntervalComboBox" Width="105" SelectedIndex="2"
                                                   VerticalContentAlignment="Center">
+                                            <ComboBoxItem Content="2 секунды" Tag="2" />
                                             <ComboBoxItem Content="5 секунд" Tag="5" />
                                             <ComboBoxItem Content="10 секунд" Tag="10" />
                                             <ComboBoxItem Content="20 секунд" Tag="20" />
@@ -205,7 +173,7 @@
                                 </Grid>
                                 <TextBlock x:Name="KeepAliveStatusText" Text="Выключен. Запросы не отправляются."
                                            FontSize="11" Margin="0,10,0,0" />
-                                <TextBlock Text="Для чистого теста задержки после простоя остановите keepalive. Адрес должен быть HTTPS; используйте только доверенный endpoint."
+                                <TextBlock Text="Для чистого теста задержки после простоя остановите keepalive. Адрес должен быть HTTPS; используйте только доверенный endpoint. Интенсивный режим (2 с) расходует больше трафика и заряда."
                                            Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
                         </Border>
@@ -368,6 +336,154 @@
                 </ScrollViewer>
             </TabItem>
 
+            <TabItem Header="Оптимизация">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,10,0,0">
+                    <StackPanel>
+                        <Border x:Name="AdminBanner" Background="#FFF6E5" BorderBrush="#F0D9A8" BorderThickness="1"
+                                CornerRadius="12" Padding="14" Margin="0,0,0,12" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Для изменения настроек адаптера и системы нужны права администратора. Измерения и просмотр состояния работают и без них."
+                                           TextWrapping="Wrap" FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <Button Grid.Column="1" Content="Перезапустить от администратора" Click="RestartAsAdmin_Click" />
+                            </Grid>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="НАСТРОЙКИ АДАПТЕРА И СИСТЕМЫ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Перед первым изменением PingBoost сохраняет исходные значения. Любое изменение можно отменить кнопками внизу вкладки. Драйверы не устанавливаются."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Адаптер" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="TuningAdapterComboBox" Width="420" />
+                                    <Button Content="Обновить" Margin="8,0,0,0" Click="RefreshTuningAdapters_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <StackPanel x:Name="TweaksPanel" Margin="0,12,0,0" />
+                                <WrapPanel Margin="0,12,0,0">
+                                    <Button x:Name="ApplyTweaksButton" Content="Применить выбранное" Click="ApplyTweaks_Click" />
+                                    <Button Content="Показать текущее состояние" Margin="8,0,0,0" Click="ShowTuningState_Click" Style="{StaticResource SecondaryButton}" />
+                                </WrapPanel>
+                                <TextBlock Text="Некоторые параметры перезапускают адаптер: соединение пропадёт на несколько секунд. Не применяйте их во время матча."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="MTU БЕЗ ФРАГМЕНТАЦИИ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Находит самый большой пакет, который проходит до узла без фрагментации (аналог ping -f -l). На мобильных каналах фрагментация UDP может давать потери. Для проверки выберите адрес игрового сервера или публичный узел."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox x:Name="MtuHostTextBox" Text="1.1.1.1" Width="200" />
+                                    <Button x:Name="ProbeMtuButton" Content="Подобрать MTU" Margin="8,0,0,0" Click="ProbeMtu_Click" />
+                                    <Button x:Name="ApplyMtuButton" Content="Применить найденный MTU" Margin="8,0,0,0" IsEnabled="False"
+                                            Click="ApplyMtu_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <TextBlock x:Name="MtuResultText" Text="Результат появится здесь." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="DSCP" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="DscpComboBox" Width="200" SelectedIndex="0">
+                                        <ComboBoxItem Content="46 · Expedited Forwarding" Tag="46" />
+                                        <ComboBoxItem Content="34 · AF41" Tag="34" />
+                                        <ComboBoxItem Content="26 · AF31" Tag="26" />
+                                    </ComboBox>
+                                    <Button Content="Включить для процесса игры" Margin="8,0,0,0" Click="EnableQos_Click" />
+                                    <Button Content="Убрать" Margin="8,0,0,0" Click="RemoveQos_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <TextBlock x:Name="QosStatusText" Text="Политика не создана." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="ИГРОВОЙ РЕЖИМ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Временные изменения на время игры. При выключении всё возвращается; если приложение закрыть, режим выключается автоматически."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,10" />
+                                <CheckBox x:Name="GameModePriorityCheckBox" Content="Высокий приоритет процесса игры" IsChecked="True" Margin="0,0,0,4" />
+                                <CheckBox x:Name="GameModePowerCheckBox" Content="Схема питания «Высокая производительность»" IsChecked="True" Margin="0,0,0,4" />
+                                <CheckBox x:Name="GameModeServicesCheckBox" Content="Остановить фоновые загрузки (Центр обновления, BITS, Delivery Optimization)" IsChecked="True" Margin="0,0,0,10" />
+                                <WrapPanel>
+                                    <Button x:Name="GameModeStartButton" Content="Включить игровой режим" Click="GameModeStart_Click" />
+                                    <Button x:Name="GameModeStopButton" Content="Выключить" Margin="8,0,0,0" IsEnabled="False"
+                                            Click="GameModeStop_Click" Style="{StaticResource SecondaryButton}" />
+                                </WrapPanel>
+                                <TextBlock x:Name="GameModeStatusText" Text="Выключен." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="ОТКАТ НАСТРОЕК" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="«Вернуть как было» восстанавливает значения, сохранённые перед первым изменением. «Стандартные настройки Windows» выставляет документированные значения по умолчанию для всех параметров, которыми управляет PingBoost, даже если резервной копии нет."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <WrapPanel>
+                                    <Button x:Name="RestorePreviousButton" Content="Вернуть как было до PingBoost" Click="RestorePrevious_Click" />
+                                    <Button x:Name="ResetDefaultsButton" Content="Сбросить к стандартным настройкам Windows" Margin="8,0,0,0"
+                                            Click="ResetDefaults_Click" Style="{StaticResource SecondaryButton}" />
+                                </WrapPanel>
+                                <TextBox x:Name="TuningLogTextBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" Height="170" FontFamily="Consolas" FontSize="11" Margin="0,12,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="UDP-монитор">
+                <Grid Margin="0,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="UDP-трафик игры" FontSize="19" FontWeight="SemiBold" />
+                        <TextBlock Text="Показывает адреса и порты, с которыми игра обменивается UDP-пакетами, а также скорость приёма и максимальную паузу между принятыми пакетами за последние 10 секунд. Читаются только заголовки (адреса, порты, размер, время), содержимое пакетов не анализируется. Игровой сервер — строка с наибольшим числом пакетов."
+                                   Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,12" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button x:Name="UdpStartButton" Content="Начать наблюдение" Click="UdpStart_Click" />
+                            <Button x:Name="UdpStopButton" Content="Остановить" Margin="8,0,0,0" IsEnabled="False"
+                                    Click="UdpStop_Click" Style="{StaticResource SecondaryButton}" />
+                            <TextBlock x:Name="UdpStatusText" Text="Не запущено. Нужны права администратора. Процесс берётся из профиля игры; если он пуст — показываются все процессы."
+                                       VerticalAlignment="Center" FontSize="11" Margin="14,0,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                            BorderThickness="1" CornerRadius="12" Padding="14">
+                        <DataGrid ItemsSource="{Binding UdpRows}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Процесс" Binding="{Binding ProcessName}" Width="*" />
+                                <DataGridTextColumn Header="Удалённый адрес" Binding="{Binding Remote}" Width="2*" />
+                                <DataGridTextColumn Header="Отправлено" Binding="{Binding SentPackets}" Width="*" />
+                                <DataGridTextColumn Header="Принято" Binding="{Binding ReceivedPackets}" Width="*" />
+                                <DataGridTextColumn Header="Приём, пак/с" Binding="{Binding ReceiveRateText}" Width="*" />
+                                <DataGridTextColumn Header="Макс. пауза приёма" Binding="{Binding MaxGapText}" Width="*" />
+                                <DataGridTextColumn Header="Последний пакет" Binding="{Binding LastReceiveText}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                    <TextBlock Grid.Row="2" Margin="0,10,0,0" Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap"
+                               Text="Пауза приёма в сотни миллисекунд при активной игре означает, что от сервера не приходили пакеты: потеря или задержка на пути от сервера. Это не видно по ICMP-пингу до роутера или 1.1.1.1. Сравнивайте паузы с ощущаемыми лагами." />
+                </Grid>
+            </TabItem>
+
             <TabItem Header="Маршрут">
                 <Grid Margin="0,10,0,0">
                     <Grid.RowDefinitions>
@@ -403,7 +519,7 @@
             </TabItem>
         </TabControl>
 
-        <TextBlock Grid.Row="3" Text="Диагностика не меняет системные настройки и не гарантирует уменьшения ping. ICMP может блокироваться сетью или сервером."
+        <TextBlock Grid.Row="3" Text="Измерения не меняют систему. Вкладка «Оптимизация» меняет настройки только после вашего подтверждения, сохраняет исходные значения и может вернуть всё к стандартным. Результат зависит от оператора и канала и не гарантирован."
                    Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="2,12,2,0" />
     </Grid>
 </Window>
