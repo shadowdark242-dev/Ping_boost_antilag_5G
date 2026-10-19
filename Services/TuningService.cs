@@ -44,6 +44,7 @@ public sealed class TuningService
     [
         new("ad-power", "Отключить энергосбережение адаптера", "Запрещает Windows выключать адаптер для экономии энергии и отключает режимы экономии в драйвере (если драйвер их поддерживает).", true),
         new("ad-irq", "Отключить Interrupt Moderation", "Адаптер сразу сообщает системе о каждом пакете, а не копит их. Снижает задержку и джиттер, немного повышает нагрузку на CPU.", true),
+        new("tcp-ecn", "TCP: включить ECN", "Если оператор помечает перегрузку в пакете вместо отбрасывания, TCP снижает скорость до того, как очередь вырастет. Работает только если оператор поддерживает ECN; иначе ничего не меняется. Только TCP, действует на новые соединения.", false),
         new("ad-eee", "Отключить Energy-Efficient Ethernet / Green Ethernet", "Убирает короткие «засыпания» проводного порта между пакетами.", true),
         new("ad-roam", "Минимальная агрессивность роуминга Wi-Fi", "Адаптер реже сканирует эфир и переключается между точками; уменьшает скачки пинга при игре через Wi-Fi.", true),
         new("ad-lso", "Отключить Large Send Offload", "Пакеты формируются процессором, а не сетевой картой. Иногда убирает задержки пакетов при отправке.", true),
@@ -121,6 +122,7 @@ public sealed class TuningService
                     "tcp-timestamps" => await ApplyTimestampsAsync(),
                     "tcp-autotune-restricted" => await ApplyAutoTuningAsync("Restricted"),
                     "tcp-autotune-highly" => await ApplyAutoTuningAsync("HighlyRestricted"),
+                    "tcp-ecn" => await ApplyEcnAsync(),
                     _ => ApplyRegistry(RegistrySpecs(id, adapter))
                 };
                 log.Add($"✓ {definition.Title}: {message}");
@@ -367,6 +369,18 @@ public sealed class TuningService
         _backup.GlobalRsc ??= current;
         await RunAsync("Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Disabled");
         return "отключено.";
+    }
+
+    private async Task<string> ApplyEcnAsync()
+    {
+        var current = await QueryAsync($"[string](Get-NetTCPSetting -SettingName {TcpSetting}).EcnCapability");
+        if (current is null)
+            return "не удалось прочитать текущее значение.";
+        _backup.Tcp.TryAdd("EcnCapability", current);
+        if (current == "Enabled")
+            return "уже включён.";
+        await RunAsync($"Set-NetTCPSetting -SettingName {TcpSetting} -EcnCapability Enabled");
+        return $"{current} → Enabled (новые соединения).";
     }
 
     private async Task<string> ApplyAutoTuningAsync(string level)
@@ -688,6 +702,8 @@ public sealed class TuningService
 
         if (_backup.Tcp.TryGetValue("Timestamps", out var timestamps))
             log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps {timestamps}"));
+        if (_backup.Tcp.TryGetValue("EcnCapability", out var ecn))
+            log.Add(await TryAsync("TCP ECN", $"Set-NetTCPSetting -SettingName {TcpSetting} -EcnCapability {ecn}"));
         if (_backup.Tcp.TryGetValue("AutoTuningLevelLocal", out var autoTuning))
             log.Add(await TryAsync("TCP autotuning", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal {autoTuning}"));
         if (_backup.GlobalRsc is { } rsc)
@@ -759,6 +775,7 @@ public sealed class TuningService
         log.Add("✓ Реестр: TcpAckFrequency / TCPNoDelay / TcpDelAckTicks удалены у всех интерфейсов.");
 
         log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps Disabled"));
+        log.Add(await TryAsync("TCP ECN (Disabled)", $"Set-NetTCPSetting -SettingName {TcpSetting} -EcnCapability Disabled"));
         log.Add(await TryAsync("TCP autotuning (Normal)", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal Normal"));
         log.Add(await TryAsync("RSC (глобально)", "Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enabled"));
 
@@ -857,6 +874,8 @@ public sealed class TuningService
         lines.Add(tcp ?? "TCP timestamps: не удалось прочитать");
         var autoTuning = await QueryAsync($"\"TCP autotuning: $((Get-NetTCPSetting -SettingName {TcpSetting}).AutoTuningLevelLocal)\"");
         lines.Add(autoTuning ?? "TCP autotuning: не удалось прочитать");
+        var ecnState = await QueryAsync($"\"TCP ECN: $((Get-NetTCPSetting -SettingName {TcpSetting}).EcnCapability)\"");
+        lines.Add(ecnState ?? "TCP ECN: не удалось прочитать");
         var rsc = await QueryAsync("\"RSC (глобально): $((Get-NetOffloadGlobalSetting).ReceiveSegmentCoalescing)\"");
         lines.Add(rsc ?? "RSC: не удалось прочитать");
 

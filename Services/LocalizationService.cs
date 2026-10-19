@@ -43,6 +43,8 @@ public static class LocalizationService
         ["HTTPS keepalive endpoint"] = "HTTPS keepalive endpoint", ["Интервал keepalive (секунды)"] = "Keepalive interval (seconds)",
         ["Удалить профиль"] = "Delete profile", ["Сохранить настройки"] = "Save settings",
         ["ROUTE COMPARISON"] = "ROUTE COMPARISON",
+        ["TCP: включить ECN"] = "TCP: enable ECN",
+        ["Если оператор помечает перегрузку в пакете вместо отбрасывания, TCP снижает скорость до того, как очередь вырастет. Работает только если оператор поддерживает ECN; иначе ничего не меняется. Только TCP, действует на новые соединения."] = "If the carrier marks congestion in the packet instead of dropping it, TCP slows down before the queue grows. Works only if the carrier supports ECN; otherwise nothing changes. TCP only, applies to new connections.",
         ["Общий потолок отдачи всего ПК"] = "Overall upload ceiling for the whole PC",
         ["Потолок ниже реальной скорости отдачи не даёт компьютеру забивать очередь модема, и пинг под нагрузкой остаётся низким. Игровой трафик идёт на малой скорости и потолка не достигает. Скорость отдачи канала плавает, начните с 40 Мбит/с и проверьте тестом Waveform."] = "A ceiling below the real upload speed keeps the PC from filling the modem queue so ping under load stays low. Game traffic is low-rate and never reaches the ceiling. Link upload speed varies; start at 40 Mbit/s and check with the Waveform test.",
         ["Потолок отдачи ПК"] = "PC upload ceiling", ["Включить общий потолок"] = "Enable overall ceiling",
