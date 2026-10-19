@@ -499,7 +499,8 @@ public partial class MainWindow
             foreach (var check in _tweakChecks.Values)
                 check.IsChecked = false;
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception
+                                       or System.Security.SecurityException or System.IO.IOException)
         {
             AppendTuningLog([$"Ошибка: {ex.Message}"]);
         }

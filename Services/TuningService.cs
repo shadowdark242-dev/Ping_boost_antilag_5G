@@ -247,7 +247,6 @@ public sealed class TuningService
 
     private async Task<string> ApplyPowerAsync(AdapterInfo adapter)
     {
-        var name = PowerShellRunner.Quote(adapter.Name);
         var parts = new List<string>();
         // "Allow the computer to turn off this device to save power" has no cmdlet parameter; Device Manager
         // stores it in the PnPCapabilities bit mask (0x18) of the adapter's driver key.
@@ -797,8 +796,11 @@ public sealed class TuningService
             // Not every adapter supports LSO/RSC; enabling is attempted only where the feature exists.
             log.Add(await TryAsync($"{adapter.Name}: LSO", $"if (Get-NetAdapterLso -Name {quoted} -ErrorAction SilentlyContinue) {{ Enable-NetAdapterLso -Name {quoted} -NoRestart }}"));
             log.Add(await TryAsync($"{adapter.Name}: RSC", $"if (Get-NetAdapterRsc -Name {quoted} -ErrorAction SilentlyContinue) {{ Enable-NetAdapterRsc -Name {quoted} -NoRestart }}"));
-            var mtu = _backup.Adapters.TryGetValue(adapter.Name, out var saved) ? saved.Mtu : null;
-            log.Add(await TryAsync($"{adapter.Name}: MTU {mtu ?? 1500}", $"Set-NetIPInterface -InterfaceAlias {quoted} -AddressFamily IPv4 -NlMtuBytes {mtu ?? 1500}"));
+            // The default MTU depends on the adapter (cellular modems are often below 1500), so it is only restored from a backup.
+            if (_backup.Adapters.TryGetValue(adapter.Name, out var saved) && saved.Mtu is { } savedMtu)
+                log.Add(await TryAsync($"{adapter.Name}: MTU {savedMtu}", $"Set-NetIPInterface -InterfaceAlias {quoted} -AddressFamily IPv4 -NlMtuBytes {savedMtu}"));
+            else
+                log.Add($"— {adapter.Name}: MTU не менялся через PingBoost, оставлен как есть.");
         }
 
         log.Add(await TryAsync("QoS-политики PingBoost", $"Get-NetQosPolicy -ErrorAction SilentlyContinue | Where-Object {{ $_.Name -like '{QosPolicyPrefix}*' }} | Remove-NetQosPolicy -Confirm:$false"));

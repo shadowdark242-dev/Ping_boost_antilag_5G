@@ -55,7 +55,18 @@ public sealed class UdpFlowMonitor : IDisposable
         _cancellation = new CancellationTokenSource();
 
         var session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-        session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
+        try
+        {
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
+        }
+        catch
+        {
+            // Do not leave a half-configured kernel session running.
+            session.Dispose();
+            _cancellation.Dispose();
+            _cancellation = null;
+            throw;
+        }
         var kernel = session.Source.Kernel;
         kernel.UdpIpSend += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: true);
         kernel.UdpIpRecv += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: false);
