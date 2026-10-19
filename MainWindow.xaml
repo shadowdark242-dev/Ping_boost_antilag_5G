@@ -421,6 +421,20 @@
                                     <Button Content="Применить ограничение" Margin="8,0,0,0" Click="EnableThrottle_Click" />
                                     <Button Content="Снять ограничения" Margin="8,0,0,0" Click="RemoveThrottle_Click" Style="{StaticResource SecondaryButton}" />
                                 </StackPanel>
+                                <TextBlock Text="Общий потолок отдачи всего ПК" FontWeight="SemiBold" FontSize="11" Margin="0,16,0,0" />
+                                <TextBlock Text="Потолок ниже реальной скорости отдачи не даёт компьютеру забивать очередь модема, и пинг под нагрузкой остаётся низким. Игровой трафик идёт на малой скорости и потолка не достигает. Скорость отдачи канала плавает, начните с 40 Мбит/с и проверьте тестом Waveform."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,6" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Потолок отдачи ПК" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="GlobalThrottleRateComboBox" Width="130" SelectedIndex="2">
+                                        <ComboBoxItem Content="20 Мбит/с" Tag="20" />
+                                        <ComboBoxItem Content="30 Мбит/с" Tag="30" />
+                                        <ComboBoxItem Content="40 Мбит/с" Tag="40" />
+                                        <ComboBoxItem Content="45 Мбит/с" Tag="45" />
+                                        <ComboBoxItem Content="50 Мбит/с" Tag="50" />
+                                    </ComboBox>
+                                    <Button Content="Включить общий потолок" Margin="8,0,0,0" Click="EnableGlobalThrottle_Click" />
+                                </StackPanel>
                                 <TextBlock x:Name="ThrottleStatusText" Text="Ограничений нет." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
                                 <TextBlock Text="Подсказка: при исходящей скорости около 58 Мбит/с держите суммарный лимит программ заметно ниже неё. После применения повторите тест Waveform и сравните оценку."
                                            Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0" />

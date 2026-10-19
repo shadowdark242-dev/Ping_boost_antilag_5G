@@ -473,6 +473,27 @@ public sealed class TuningService
         return log;
     }
 
+    /// <summary>
+    /// Caps the outgoing rate of everything this PC sends. A default policy only applies to traffic that no more
+    /// specific policy (such as the game's DSCP policy) matches, and game traffic stays far below the cap anyway.
+    /// </summary>
+    public async Task<string> EnableGlobalThrottleAsync(int megabitsPerSecond)
+    {
+        RequireAdministrator();
+        if (megabitsPerSecond is < 1 or > 1000)
+            throw new InvalidOperationException("Лимит должен быть от 1 до 1000 Мбит/с.");
+        ApplyRegistryWithoutRestart(new RegistryValueSpec(QosPath, "Do not use NLA", RegistryValueKind.String, "1", null));
+        var policy = ThrottlePolicyPrefix + "_all";
+        await RunAsync(
+            $"Remove-NetQosPolicy -Name {PowerShellRunner.Quote(policy)} -Confirm:$false -ErrorAction SilentlyContinue; " +
+            $"New-NetQosPolicy -Name {PowerShellRunner.Quote(policy)} -Default " +
+            $"-ThrottleRateActionBitsPerSecond {megabitsPerSecond * 1_000_000L} -NetworkProfile All | Out-Null");
+        if (!_backup.QosPolicies.Contains(policy))
+            _backup.QosPolicies.Add(policy);
+        _store.Save(_backup);
+        return $"общий потолок отдачи ПК: {megabitsPerSecond} Мбит/с.";
+    }
+
     public async Task RemoveThrottlesAsync()
     {
         RequireAdministrator();

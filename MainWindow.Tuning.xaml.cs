@@ -346,6 +346,30 @@ public partial class MainWindow
         }
     }
 
+    private async void EnableGlobalThrottle_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministratorRights())
+            return;
+        var rate = GlobalThrottleRateComboBox.SelectedItem is ComboBoxItem { Tag: string tag } && int.TryParse(tag, out var value) ? value : 40;
+        if (!Confirm($"Ограничить исходящую скорость всего компьютера до {rate} Мбит/с? Скорость отдачи файлов и видео упадёт до этого значения, игра на потолок не упирается. Потолок можно снять кнопкой «Снять ограничения».", "Общий потолок отдачи"))
+            return;
+
+        SetTuningBusy(true);
+        try
+        {
+            ThrottleStatusText.Text = await _tuning.EnableGlobalThrottleAsync(rate);
+            UpdateRestoreButtons();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        {
+            ThrottleStatusText.Text = $"Не удалось включить потолок: {ex.Message}";
+        }
+        finally
+        {
+            SetTuningBusy(false);
+        }
+    }
+
     private async void RemoveThrottle_Click(object sender, RoutedEventArgs e)
     {
         if (!RequireAdministratorRights())
