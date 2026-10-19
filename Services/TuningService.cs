@@ -44,6 +44,7 @@ public sealed class TuningService
     [
         new("ad-power", "Отключить энергосбережение адаптера", "Запрещает Windows выключать адаптер для экономии энергии и отключает режимы экономии в драйвере (если драйвер их поддерживает).", true),
         new("ad-irq", "Отключить Interrupt Moderation", "Адаптер сразу сообщает системе о каждом пакете, а не копит их. Снижает задержку и джиттер, немного повышает нагрузку на CPU.", true),
+        new("tcp-bbr2", "TCP: алгоритм перегрузки BBR2 вместо CUBIC", "BBR2 держит очередь у модема короче, чем CUBIC, который наполняет буфер до потерь. Должно снизить задержку при отдаче по TCP (загрузки, облако), на UDP игры не влияет. Если ваша Windows не принимает BBR2, программа скажет об этом и ничего не изменит. Действует на новые соединения.", false),
         new("ad-eee", "Отключить Energy-Efficient Ethernet / Green Ethernet", "Убирает короткие «засыпания» проводного порта между пакетами.", true),
         new("ad-roam", "Минимальная агрессивность роуминга Wi-Fi", "Адаптер реже сканирует эфир и переключается между точками; уменьшает скачки пинга при игре через Wi-Fi.", true),
         new("ad-lso", "Отключить Large Send Offload", "Пакеты формируются процессором, а не сетевой картой. Иногда убирает задержки пакетов при отправке.", true),
@@ -121,6 +122,7 @@ public sealed class TuningService
                     "tcp-timestamps" => await ApplyTimestampsAsync(),
                     "tcp-autotune-restricted" => await ApplyAutoTuningAsync("Restricted"),
                     "tcp-autotune-highly" => await ApplyAutoTuningAsync("HighlyRestricted"),
+                    "tcp-bbr2" => await ApplyCongestionProviderAsync("bbr2"),
                     _ => ApplyRegistry(RegistrySpecs(id, adapter))
                 };
                 log.Add($"✓ {definition.Title}: {message}");
@@ -367,6 +369,44 @@ public sealed class TuningService
         _backup.GlobalRsc ??= current;
         await RunAsync("Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Disabled");
         return "отключено.";
+    }
+
+    private const string CongestionPattern = "bbr2|bbr|cubic|ctcp|dctcp|newreno|compound|ledbat|none";
+
+    /// <summary>Reads the supplemental TCP congestion provider; netsh output is localized, so the value itself is matched.</summary>
+    private static async Task<string?> ReadCongestionProviderAsync()
+    {
+        var output = await QueryAsync("netsh int tcp show supplemental | Out-String");
+        if (string.IsNullOrWhiteSpace(output))
+            return null;
+        var match = System.Text.RegularExpressions.Regex.Match(output, $@"(?<=:\s*)({CongestionPattern})\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Value.ToLowerInvariant() : null;
+    }
+
+    private static async Task<string?> SetCongestionProviderAsync(string provider)
+    {
+        var result = await PowerShellRunner.RunAsync(
+            $"$o = netsh int tcp set supplemental template=internet congestionprovider={provider} 2>&1 | Out-String; " +
+            "if ($LASTEXITCODE -ne 0) { throw $o.Trim() }");
+        return result.Success ? null : (result.Error.Length > 0 ? result.Error : "netsh завершился с ошибкой");
+    }
+
+    private async Task<string> ApplyCongestionProviderAsync(string provider)
+    {
+        var current = await ReadCongestionProviderAsync();
+        if (current is null)
+            return "не удалось прочитать текущий алгоритм (netsh int tcp show supplemental).";
+        if (current == provider)
+            return $"уже {provider}.";
+        var error = await SetCongestionProviderAsync(provider);
+        if (error is not null)
+            return $"Windows не принял «{provider}» ({error}); остаётся {current}.";
+        var after = await ReadCongestionProviderAsync();
+        if (after != provider)
+            return $"после записи алгоритм {after ?? "неизвестен"}, а не {provider}; остаётся {current}.";
+        _backup.Tcp.TryAdd("CongestionProvider", current);
+        return $"{current} → {provider} (новые соединения; запущенные загрузки продолжат со старым алгоритмом).";
     }
 
     private async Task<string> ApplyAutoTuningAsync(string level)
@@ -688,6 +728,11 @@ public sealed class TuningService
 
         if (_backup.Tcp.TryGetValue("Timestamps", out var timestamps))
             log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps {timestamps}"));
+        if (_backup.Tcp.TryGetValue("CongestionProvider", out var congestion))
+        {
+            var congestionError = await SetCongestionProviderAsync(congestion);
+            log.Add(congestionError is null ? $"✓ Алгоритм перегрузки TCP → {congestion}" : $"✗ Алгоритм перегрузки TCP: {congestionError}");
+        }
         if (_backup.Tcp.TryGetValue("AutoTuningLevelLocal", out var autoTuning))
             log.Add(await TryAsync("TCP autotuning", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal {autoTuning}"));
         if (_backup.GlobalRsc is { } rsc)
@@ -759,6 +804,12 @@ public sealed class TuningService
         log.Add("✓ Реестр: TcpAckFrequency / TCPNoDelay / TcpDelAckTicks удалены у всех интерфейсов.");
 
         log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps Disabled"));
+        var resetCongestion = await ReadCongestionProviderAsync();
+        if (resetCongestion is not null and not "cubic")
+        {
+            var resetError = await SetCongestionProviderAsync("cubic");
+            log.Add(resetError is null ? "✓ Алгоритм перегрузки TCP → cubic" : $"✗ Алгоритм перегрузки TCP: {resetError}");
+        }
         log.Add(await TryAsync("TCP autotuning (Normal)", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal Normal"));
         log.Add(await TryAsync("RSC (глобально)", "Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enabled"));
 
@@ -857,6 +908,7 @@ public sealed class TuningService
         lines.Add(tcp ?? "TCP timestamps: не удалось прочитать");
         var autoTuning = await QueryAsync($"\"TCP autotuning: $((Get-NetTCPSetting -SettingName {TcpSetting}).AutoTuningLevelLocal)\"");
         lines.Add(autoTuning ?? "TCP autotuning: не удалось прочитать");
+        lines.Add($"Алгоритм перегрузки TCP: {await ReadCongestionProviderAsync() ?? "не удалось прочитать"}");
         var rsc = await QueryAsync("\"RSC (глобально): $((Get-NetOffloadGlobalSetting).ReceiveSegmentCoalescing)\"");
         lines.Add(rsc ?? "RSC: не удалось прочитать");
 
