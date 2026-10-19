@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.IO;
 using Microsoft.Win32;
 
 namespace PingBoost.Services;
