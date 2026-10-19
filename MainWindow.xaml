@@ -403,6 +403,33 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
+                                <TextBlock Text="ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Когда программа забивает исходящий канал, очередь у модема или оператора растёт и пинг в игре подскакивает. Windows ограничит скорость отдачи перечисленных программ политикой QoS. Ограничивается только исходящий трафик; входящий так не ограничить. Не добавляйте сюда саму игру."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <TextBlock Text="Программы (по одной на строку, без .exe)" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+                                <TextBox x:Name="ThrottleProcessesTextBox" Text="steam&#x0a;OneDrive" AcceptsReturn="True" Height="56"
+                                         VerticalScrollBarVisibility="Auto" Margin="0,4,0,8" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Лимит отдачи на программу" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="ThrottleRateComboBox" Width="130" SelectedIndex="2">
+                                        <ComboBoxItem Content="2 Мбит/с" Tag="2" />
+                                        <ComboBoxItem Content="5 Мбит/с" Tag="5" />
+                                        <ComboBoxItem Content="10 Мбит/с" Tag="10" />
+                                        <ComboBoxItem Content="20 Мбит/с" Tag="20" />
+                                        <ComboBoxItem Content="30 Мбит/с" Tag="30" />
+                                    </ComboBox>
+                                    <Button Content="Применить ограничение" Margin="8,0,0,0" Click="EnableThrottle_Click" />
+                                    <Button Content="Снять ограничения" Margin="8,0,0,0" Click="RemoveThrottle_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <TextBlock x:Name="ThrottleStatusText" Text="Ограничений нет." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                                <TextBlock Text="Подсказка: при исходящей скорости около 58 Мбит/с держите суммарный лимит программ заметно ниже неё. После применения повторите тест Waveform и сравните оценку."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
                                 <TextBlock Text="ИГРОВОЙ РЕЖИМ" FontSize="12" FontWeight="Bold" />
                                 <TextBlock Text="Временные изменения на время игры. При выключении всё возвращается; если приложение закрыть, режим выключается автоматически."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,10" />

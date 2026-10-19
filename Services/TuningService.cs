@@ -26,6 +26,7 @@ public sealed class TuningService
     private const string InterfacesPath = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
     private const string TcpSetting = "InternetCustom";
     private const string QosPolicyPrefix = "PingBoost-";
+    private const string ThrottlePolicyPrefix = QosPolicyPrefix + "Limit-";
     private const string HighPerformancePlan = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     private const string BalancedPlan = "381b4222-f694-41f0-9685-ff5bb260df2e";
     private static readonly string[] PausableServices = ["wuauserv", "BITS", "DoSvc"];
@@ -338,11 +339,50 @@ public sealed class TuningService
         _store.Save(_backup);
     }
 
+    /// <summary>Limits the outgoing rate of background programs so they cannot fill the uplink queue (bufferbloat).</summary>
+    public async Task<IReadOnlyList<string>> EnableThrottleAsync(IEnumerable<string> processNames, int megabitsPerSecond)
+    {
+        RequireAdministrator();
+        if (megabitsPerSecond is < 1 or > 1000)
+            throw new InvalidOperationException("Лимит должен быть от 1 до 1000 Мбит/с.");
+        var log = new List<string>();
+        ApplyRegistryWithoutRestart(new RegistryValueSpec(QosPath, "Do not use NLA", RegistryValueKind.String, "1", null));
+        foreach (var name in processNames)
+        {
+            try
+            {
+                var exe = NormalizeExecutable(name);
+                var policy = ThrottlePolicyPrefix + Path.GetFileNameWithoutExtension(exe).ToLowerInvariant();
+                await RunAsync(
+                    $"Remove-NetQosPolicy -Name {PowerShellRunner.Quote(policy)} -Confirm:$false -ErrorAction SilentlyContinue; " +
+                    $"New-NetQosPolicy -Name {PowerShellRunner.Quote(policy)} -AppPathNameMatchCondition {PowerShellRunner.Quote(exe)} " +
+                    $"-ThrottleRateActionBitsPerSecond {megabitsPerSecond * 1_000_000L} -NetworkProfile All | Out-Null");
+                if (!_backup.QosPolicies.Contains(policy))
+                    _backup.QosPolicies.Add(policy);
+                log.Add($"✓ {exe}: отдача не выше {megabitsPerSecond} Мбит/с.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                log.Add($"✗ {name}: {ex.Message}");
+            }
+        }
+        _store.Save(_backup);
+        return log;
+    }
+
+    public async Task RemoveThrottlesAsync()
+    {
+        RequireAdministrator();
+        await RunAsync($"Get-NetQosPolicy -ErrorAction SilentlyContinue | Where-Object {{ $_.Name -like '{ThrottlePolicyPrefix}*' }} | Remove-NetQosPolicy -Confirm:$false");
+        _backup.QosPolicies.RemoveAll(policy => policy.StartsWith(ThrottlePolicyPrefix, StringComparison.Ordinal));
+        _store.Save(_backup);
+    }
+
     public async Task<IReadOnlyList<string>> ListQosPoliciesAsync()
     {
         var text = await QueryAsync(
             $"Get-NetQosPolicy -ErrorAction SilentlyContinue | Where-Object {{ $_.Name -like '{QosPolicyPrefix}*' }} | " +
-            "ForEach-Object { \"$($_.Name): $($_.AppPathName) UDP DSCP $($_.DSCPAction)\" }");
+            "ForEach-Object { \"$($_.Name): $($_.AppPathName) DSCP $($_.DSCPAction), лимит отдачи (бит/с) $($_.ThrottleRateAction)\" }");
         return string.IsNullOrWhiteSpace(text) ? [] : text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 

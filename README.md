@@ -15,6 +15,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
   - adapter tweaks: disable adapter power saving, Interrupt Moderation, Energy-Efficient/Green Ethernet, Large Send Offload and Receive Segment Coalescing, lowest Wi-Fi roaming aggressiveness (only settings the driver actually exposes are touched);
   - TCP Optimizer-style system tweaks: TCP timestamps, global RSC, per-adapter `TcpAckFrequency`/`TCPNoDelay`, MMCSS network throttling and Games task priority, QoS bandwidth reservation;
   - MTU probe (largest IPv4 packet that passes without fragmentation) with an optional apply step;
+  - upload limit for background programs (Windows QoS throttle policy) to keep the uplink queue short and reduce bufferbloat;
   - Windows QoS policy that marks the selected game's outgoing UDP traffic with a DSCP value;
   - game mode: High process priority, High performance power plan and temporary pause of Windows Update/BITS/Delivery Optimization;
   - **restore buttons**: "Restore state from before PingBoost" (uses a backup saved before the first change) and "Reset to Windows defaults" (sets documented defaults for every managed setting, even without a backup).

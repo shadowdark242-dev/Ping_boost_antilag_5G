@@ -305,6 +305,66 @@ public partial class MainWindow
         }
     }
 
+    // ------------------------------------------------------------ upload throttle
+
+    private async void EnableThrottle_Click(object sender, RoutedEventArgs e)
+    {
+        var names = ThrottleProcessesTextBox.Text
+            .Split(new[] { '\r', '\n', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (names.Length == 0)
+        {
+            ThrottleStatusText.Text = "Укажите хотя бы одну программу.";
+            return;
+        }
+        if (GameProcessName.Length > 0 && names.Any(name => System.IO.Path.GetFileNameWithoutExtension(name).Equals(GameProcessName, StringComparison.OrdinalIgnoreCase)))
+        {
+            ThrottleStatusText.Text = $"Уберите из списка процесс игры ({GameProcessName}): ограничивать нужно только фоновые программы.";
+            return;
+        }
+        if (!RequireAdministratorRights())
+            return;
+        var rate = ThrottleRateComboBox.SelectedItem is ComboBoxItem { Tag: string tag } && int.TryParse(tag, out var value) ? value : 10;
+        if (!Confirm($"Ограничить исходящую скорость программ ({string.Join(", ", names)}) до {rate} Мбит/с каждая? Ограничение можно снять кнопкой «Снять ограничения».", "Ограничение отдачи"))
+            return;
+
+        SetTuningBusy(true);
+        try
+        {
+            var log = await _tuning.EnableThrottleAsync(names, rate);
+            ThrottleStatusText.Text = string.Join(Environment.NewLine, log);
+            UpdateRestoreButtons();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        {
+            ThrottleStatusText.Text = $"Не удалось применить ограничение: {ex.Message}";
+        }
+        finally
+        {
+            SetTuningBusy(false);
+        }
+    }
+
+    private async void RemoveThrottle_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministratorRights())
+            return;
+        SetTuningBusy(true);
+        try
+        {
+            await _tuning.RemoveThrottlesAsync();
+            ThrottleStatusText.Text = "Ограничения сняты.";
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        {
+            ThrottleStatusText.Text = $"Не удалось снять ограничения: {ex.Message}";
+        }
+        finally
+        {
+            SetTuningBusy(false);
+        }
+    }
+
     // ------------------------------------------------------------ game mode
 
     private async void GameModeStart_Click(object sender, RoutedEventArgs e)
@@ -407,6 +467,7 @@ public partial class MainWindow
             GameModeStopButton.IsEnabled = false;
             GameModeStatusText.Text = "Выключен.";
             QosStatusText.Text = "Политика не создана.";
+            ThrottleStatusText.Text = "Ограничений нет.";
             ApplyMtuButton.IsEnabled = false;
             foreach (var check in _tweakChecks.Values)
                 check.IsChecked = false;
