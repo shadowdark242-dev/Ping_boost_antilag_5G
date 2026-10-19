@@ -72,34 +72,32 @@
             <Setter Property="RowHeaderWidth" Value="0" />
             <Setter Property="FontSize" Value="12" />
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="Padding" Value="18,9" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="Cursor" Value="Hand" />
+        <!-- Standard tab headers; the strip only gets a full-width baseline so the tabs do not look cut off at the bottom. -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabBorder" Background="Transparent" CornerRadius="9"
-                                Padding="{TemplateBinding Padding}" Margin="0,2,0,8" SnapsToDevicePixels="True">
-                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" RecognizesAccessKey="True" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="#E6E9EF" />
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource AccentBrush}" />
-                                <Setter Property="Foreground" Value="White" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid SnapsToDevicePixels="True" KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,0,1">
+                                <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Margin="0"
+                                          Panel.ZIndex="1" KeyboardNavigation.TabIndex="1" />
+                            </Border>
+                            <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1"
+                                              ContentSource="SelectedContent" Margin="0" />
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="18,10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </Application.Resources>
 </Application>
