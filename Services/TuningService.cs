@@ -40,20 +40,21 @@ public sealed class TuningService
         ["ad-roam"] = new() { ["RoamAggressiveness"] = "1" }
     };
 
+    /// <summary>Ordered by expected usefulness for a cellular link with loss and ping spikes under load.</summary>
     public static IReadOnlyList<TweakDefinition> Tweaks { get; } =
     [
+        new("tcp-autotune-restricted", "Ограничить приём TCP: autotuning Restricted", "Окно приёма до 1 МБ: одно соединение не разгонится выше примерно 140 Мбит/с при пинге 60 мс. Скачивание меньше забивает очередь модема. Только TCP, действует на новые соединения.", false),
         new("ad-power", "Отключить энергосбережение адаптера", "Запрещает Windows выключать адаптер для экономии энергии и отключает режимы экономии в драйвере (если драйвер их поддерживает).", true),
         new("ad-irq", "Отключить Interrupt Moderation", "Адаптер сразу сообщает системе о каждом пакете, а не копит их. Снижает задержку и джиттер, немного повышает нагрузку на CPU.", true),
+        new("tcp-autotune-highly", "Ограничить приём TCP сильнее: autotuning HighlyRestricted", "Окно приёма до 256 КБ: примерно 35 Мбит/с на соединение при пинге 60 мс. Заметно снижает скорость загрузок, а пинг под нагрузкой обычно падает сильнее. Только TCP. Если отмечены оба пункта, применяется этот.", false),
         new("ad-eee", "Отключить Energy-Efficient Ethernet / Green Ethernet", "Убирает короткие «засыпания» проводного порта между пакетами.", true),
         new("ad-roam", "Минимальная агрессивность роуминга Wi-Fi", "Адаптер реже сканирует эфир и переключается между точками; уменьшает скачки пинга при игре через Wi-Fi.", true),
+        new("reg-mmcss", "MMCSS: снять сетевое ограничение и повысить отзывчивость", "NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer.", false),
         new("ad-lso", "Отключить Large Send Offload", "Пакеты формируются процессором, а не сетевой картой. Иногда убирает задержки пакетов при отправке.", true),
+        new("reg-tcpack", "TCP: без задержки ACK и без алгоритма Nagle (выбранный адаптер)", "TcpAckFrequency=1, TCPNoDelay=1, TcpDelAckTicks=0. Только TCP-игры и лаунчеры, UDP не затрагивается.", true),
         new("ad-rsc", "Отключить Receive Segment Coalescing на адаптере", "Принятые пакеты не склеиваются перед передачей системе.", true),
         new("tcp-rsc", "Отключить Receive Segment Coalescing глобально", "Системная настройка RSC. Влияет на TCP-трафик, на UDP игры напрямую не влияет.", false),
         new("tcp-timestamps", "Отключить TCP timestamps", "Из TCP-заголовков убираются 12 байт. Только TCP.", false),
-        new("tcp-autotune-restricted", "Ограничить приём TCP: autotuning Restricted", "Окно приёма до 1 МБ: одно соединение не разгонится выше примерно 140 Мбит/с при пинге 60 мс. Скачивание меньше забивает очередь модема. Только TCP, действует на новые соединения.", false),
-        new("tcp-autotune-highly", "Ограничить приём TCP сильнее: autotuning HighlyRestricted", "Окно приёма до 256 КБ: примерно 35 Мбит/с на соединение при пинге 60 мс. Заметно снижает скорость загрузок, а пинг под нагрузкой обычно падает сильнее. Только TCP. Если отмечены оба пункта, применяется этот.", false),
-        new("reg-tcpack", "TCP: без задержки ACK и без алгоритма Nagle (выбранный адаптер)", "TcpAckFrequency=1, TCPNoDelay=1, TcpDelAckTicks=0. Только TCP-игры и лаунчеры, UDP не затрагивается.", true),
-        new("reg-mmcss", "MMCSS: снять сетевое ограничение и повысить отзывчивость", "NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer.", false),
         new("reg-games", "MMCSS: высокий приоритет задач Games", "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.", false),
         new("reg-psched", "Не резервировать полосу для QoS", "NonBestEffortLimit=0. На современных Windows почти не влияет, но часто используется в профилях TCP Optimizer.", false)
     ];

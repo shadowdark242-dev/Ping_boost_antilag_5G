@@ -346,64 +346,19 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="НАСТРОЙКИ АДАПТЕРА И СИСТЕМЫ" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Перед первым изменением PingBoost сохраняет исходные значения. Любое изменение можно отменить кнопками внизу вкладки. Драйверы не устанавливаются."
-                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Адаптер" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
-                                    <ComboBox x:Name="TuningAdapterComboBox" Width="420" />
-                                    <Button Content="Обновить" Margin="8,0,0,0" Click="RefreshTuningAdapters_Click" Style="{StaticResource SecondaryButton}" />
-                                </StackPanel>
-                                <StackPanel x:Name="TweaksPanel" Margin="0,12,0,0" />
-                                <WrapPanel Margin="0,12,0,0">
-                                    <Button x:Name="ApplyTweaksButton" Content="Применить выбранное" Click="ApplyTweaks_Click" />
-                                    <Button Content="Показать текущее состояние" Margin="8,0,0,0" Click="ShowTuningState_Click" Style="{StaticResource SecondaryButton}" />
-                                </WrapPanel>
-                                <TextBlock Text="Некоторые параметры перезапускают адаптер: соединение пропадёт на несколько секунд. Не применяйте их во время матча."
-                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0" />
+                                <TextBlock Text="С ЧЕГО НАЧАТЬ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Разделы ниже расставлены по пользе для мобильного канала с потерями и скачками пинга под нагрузкой. Три самых полезных отмечены звёздочкой. Меняйте по одному пункту и сравнивайте тестом Waveform."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,8" />
+                                <TextBlock Text="★ Топ-1 · Общий потолок отдачи ПК: убирает раздувание очереди на отдаче (+200…340 мс в ваших замерах)." FontSize="11" TextWrapping="Wrap" />
+                                <TextBlock Text="★ Топ-2 · Ограничение приёма TCP (Restricted): убрало раздувание на скачивании (+200…390 → 0 мс), цена — скорость скачивания." FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                <TextBlock Text="★ Топ-3 · Отключить энергосбережение адаптера: безопасно, убирает засыпание адаптера между пакетами." FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                             </StackPanel>
                         </Border>
 
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="MTU БЕЗ ФРАГМЕНТАЦИИ" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Находит самый большой пакет, который проходит до узла без фрагментации (аналог ping -f -l). На мобильных каналах фрагментация UDP может давать потери. Для проверки выберите адрес игрового сервера или публичный узел."
-                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBox x:Name="MtuHostTextBox" Text="1.1.1.1" Width="200" />
-                                    <Button x:Name="ProbeMtuButton" Content="Подобрать MTU" Margin="8,0,0,0" Click="ProbeMtu_Click" />
-                                    <Button x:Name="ApplyMtuButton" Content="Применить найденный MTU" Margin="8,0,0,0" IsEnabled="False"
-                                            Click="ApplyMtu_Click" Style="{StaticResource SecondaryButton}" />
-                                </StackPanel>
-                                <TextBlock x:Name="MtuResultText" Text="Результат появится здесь." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
-                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
-                            <StackPanel>
-                                <TextBlock Text="QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."
-                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="DSCP" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
-                                    <ComboBox x:Name="DscpComboBox" Width="200" SelectedIndex="0">
-                                        <ComboBoxItem Content="46 · Expedited Forwarding" Tag="46" />
-                                        <ComboBoxItem Content="34 · AF41" Tag="34" />
-                                        <ComboBoxItem Content="26 · AF31" Tag="26" />
-                                    </ComboBox>
-                                    <Button Content="Включить для процесса игры" Margin="8,0,0,0" Click="EnableQos_Click" />
-                                    <Button Content="Убрать" Margin="8,0,0,0" Click="RemoveQos_Click" Style="{StaticResource SecondaryButton}" />
-                                </StackPanel>
-                                <TextBlock x:Name="QosStatusText" Text="Политика не создана." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
-                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
-                            <StackPanel>
-                                <TextBlock Text="ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="★ ТОП-1 · ОГРАНИЧЕНИЕ ОТДАЧИ (BUFFERBLOAT)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
                                 <TextBlock Text="Когда программа забивает исходящий канал, очередь у модема или оператора растёт и пинг в игре подскакивает. Windows ограничит скорость отдачи перечисленных программ политикой QoS. Ограничивается только исходящий трафик; входящий так не ограничить. Не добавляйте сюда саму игру."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
                                 <TextBlock Text="Программы (по одной на строку, без .exe)" Foreground="{StaticResource MutedBrush}" FontSize="11" />
@@ -444,6 +399,27 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
+                                <TextBlock Text="НАСТРОЙКИ АДАПТЕРА И СИСТЕМЫ · ПО ПОЛЬЗЕ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Перед первым изменением PingBoost сохраняет исходные значения. Любое изменение можно отменить кнопками внизу вкладки. Драйверы не устанавливаются."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Адаптер" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="TuningAdapterComboBox" Width="420" />
+                                    <Button Content="Обновить" Margin="8,0,0,0" Click="RefreshTuningAdapters_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <StackPanel x:Name="TweaksPanel" Margin="0,12,0,0" />
+                                <WrapPanel Margin="0,12,0,0">
+                                    <Button x:Name="ApplyTweaksButton" Content="Применить выбранное" Click="ApplyTweaks_Click" />
+                                    <Button Content="Показать текущее состояние" Margin="8,0,0,0" Click="ShowTuningState_Click" Style="{StaticResource SecondaryButton}" />
+                                </WrapPanel>
+                                <TextBlock Text="Некоторые параметры перезапускают адаптер: соединение пропадёт на несколько секунд. Не применяйте их во время матча."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
                                 <TextBlock Text="ИГРОВОЙ РЕЖИМ" FontSize="12" FontWeight="Bold" />
                                 <TextBlock Text="Временные изменения на время игры. При выключении всё возвращается; если приложение закрыть, режим выключается автоматически."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,10" />
@@ -456,6 +432,42 @@
                                             Click="GameModeStop_Click" Style="{StaticResource SecondaryButton}" />
                                 </WrapPanel>
                                 <TextBlock x:Name="GameModeStatusText" Text="Выключен." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="MTU БЕЗ ФРАГМЕНТАЦИИ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Находит самый большой пакет, который проходит до узла без фрагментации (аналог ping -f -l). На мобильных каналах фрагментация UDP может давать потери. Для проверки выберите адрес игрового сервера или публичный узел."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox x:Name="MtuHostTextBox" Text="1.1.1.1" Width="200" />
+                                    <Button x:Name="ProbeMtuButton" Content="Подобрать MTU" Margin="8,0,0,0" Click="ProbeMtu_Click" />
+                                    <Button x:Name="ApplyMtuButton" Content="Применить найденный MTU" Margin="8,0,0,0" IsEnabled="False"
+                                            Click="ApplyMtu_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <TextBlock x:Name="MtuResultText" Text="Результат появится здесь." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="DSCP" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="DscpComboBox" Width="200" SelectedIndex="0">
+                                        <ComboBoxItem Content="46 · Expedited Forwarding" Tag="46" />
+                                        <ComboBoxItem Content="34 · AF41" Tag="34" />
+                                        <ComboBoxItem Content="26 · AF31" Tag="26" />
+                                    </ComboBox>
+                                    <Button Content="Включить для процесса игры" Margin="8,0,0,0" Click="EnableQos_Click" />
+                                    <Button Content="Убрать" Margin="8,0,0,0" Click="RemoveQos_Click" Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
+                                <TextBlock x:Name="QosStatusText" Text="Политика не создана." FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
                             </StackPanel>
                         </Border>
 

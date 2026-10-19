@@ -22,6 +22,13 @@ public partial class MainWindow
 
     public ObservableCollection<UdpFlowRow> UdpRows { get; } = [];
 
+    // Rank 1 is the overall upload ceiling card; the checkboxes below hold ranks 2 and 3.
+    private static readonly Dictionary<string, int> TopTweakRanks = new()
+    {
+        ["tcp-autotune-restricted"] = 2,
+        ["ad-power"] = 3
+    };
+
     private AdapterInfo? SelectedAdapter => TuningAdapterComboBox.SelectedItem as AdapterInfo;
 
     private string GameProcessName => System.IO.Path.GetFileNameWithoutExtension(GameProcessComboBox.Text.Trim());
@@ -30,9 +37,23 @@ public partial class MainWindow
     {
         foreach (var tweak in TuningService.Tweaks)
         {
-            var check = new CheckBox { Content = tweak.Title, ToolTip = tweak.Description, Margin = new Thickness(0, 6, 0, 0) };
+            var check = new CheckBox { Content = tweak.Title, ToolTip = tweak.Description, VerticalAlignment = VerticalAlignment.Center };
             _tweakChecks[tweak.Id] = check;
-            TweaksPanel.Children.Add(check);
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            row.Children.Add(check);
+            if (TopTweakRanks.TryGetValue(tweak.Id, out var rank))
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = $"★ Топ-{rank}",
+                    Foreground = (System.Windows.Media.Brush)FindResource("AccentBrush"),
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 11,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(10, 0, 0, 0)
+                });
+            }
+            TweaksPanel.Children.Add(row);
             TweaksPanel.Children.Add(new TextBlock
             {
                 Text = tweak.Description,
