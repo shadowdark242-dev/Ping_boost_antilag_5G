@@ -24,15 +24,14 @@
                                FontSize="10" FontWeight="Bold" Margin="0,2,0,0" />
                 </StackPanel>
             </StackPanel>
-            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="White"
-                    BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="14"
-                    Padding="12,7">
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#A4AAB3" Margin="0,0,8,0" />
-                    <TextBlock x:Name="StatusText" Text="ГОТОВО К ТЕСТУ" FontSize="10" FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" />
-                </StackPanel>
-            </Border>
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="SettingsButton" Content="⚙" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Width="48" Height="44" Padding="0" HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center" ClipToBounds="False"
+                        ToolTip="Настройки" Click="Settings_Click"
+                        Background="White" Foreground="{StaticResource TextBrush}"
+                        BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+            </StackPanel>
         </Grid>
 
         <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
@@ -59,7 +58,7 @@
         </Border>
 
         <TabControl Grid.Row="2" Background="Transparent" BorderThickness="0">
-            <TabItem Header="4G / 5G тесты">
+            <TabItem Header="Тесты">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,10,0,0">
                     <StackPanel>
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
@@ -98,7 +97,7 @@
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock x:Name="IdleTestSummaryText" Text="Средний сдвиг после паузы: —"
-                                           FontSize="12" FontWeight="SemiBold" Margin="0,12,0,0" />
+                                           FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,12,0,0" />
                                 <DataGrid x:Name="IdleResultsGrid" ItemsSource="{Binding IdleRows}" MinHeight="120"
                                           MaxHeight="220" Margin="0,8,0,0">
                                     <DataGrid.Columns>
@@ -107,6 +106,65 @@
                                         <DataGridTextColumn Header="Сразу после трафика" Binding="{Binding WarmText}" Width="*" />
                                         <DataGridTextColumn Header="После паузы" Binding="{Binding IdleText}" Width="*" />
                                         <DataGridTextColumn Header="Разница" Binding="{Binding DeltaText}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="ЗАПИСЬ ИГРОВОЙ СЕССИИ" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Параллельно проверяет локальный шлюз и внешний узел, чтобы понять, где возникают задержки или пропуски ICMP. Во время игры отмечайте события кнопками ниже. Это диагностические ICMP-пробы, не захват игровых UDP-пакетов."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
+                                <TextBlock Text="Сессия также отмечает доступные системные события и IPv4 UDP локальные порты выбранного процесса. Снимок маршрута — ручной traceroute; на время снимка обычные пробы приостанавливаются."
+                                           Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="170" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Шлюз" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <TextBox x:Name="SessionGatewayTextBox" Grid.Column="1" />
+                                    <TextBlock Text="Внешний узел" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="12,0,7,0" />
+                                    <TextBox x:Name="SessionRemoteTextBox" Grid.Column="3" Text="1.1.1.1" />
+                                    <Button x:Name="StartSessionButton" Grid.Column="4" Content="Начать запись" Margin="12,0,0,0" Click="StartSession_Click" />
+                                    <Button x:Name="StopSessionButton" Grid.Column="5" Content="Остановить" Margin="8,0,0,0" IsEnabled="False" Click="StopSession_Click"
+                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+                                </Grid>
+                                <WrapPanel Margin="0,9,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="Профиль" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="GameProfileComboBox" Width="190" DisplayMemberPath="Name" SelectionChanged="GameProfile_SelectionChanged" />
+                                    <Button x:Name="CaptureSessionRoutesButton" Content="Снять / сравнить маршруты" Margin="8,0,0,0" Click="CaptureSessionRoutes_Click"
+                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+                                    <TextBlock Text="Процесс" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="14,0,7,0" />
+                                    <ComboBox x:Name="GameProcessComboBox" Width="180" IsEditable="True" ToolTip="Имя процесса без .exe" />
+                                    <Button Content="Обновить" Margin="6,0,0,0" Click="RefreshProcesses_Click"
+                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,10,0,0">
+                                    <Button Content="Спокойно" Click="SessionCalm_Click" />
+                                    <Button Content="Начался бой" Margin="8,0,0,0" Click="SessionCombat_Click" />
+                                    <Button Content="Заметил потери" Margin="8,0,0,0" Click="SessionLoss_Click" />
+                                    <Button x:Name="ExportSessionButton" Content="Экспорт сессии CSV" Margin="8,0,0,0" IsEnabled="False" Click="ExportSession_Click"
+                                            Background="{StaticResource SoftFillBrush}" Foreground="{StaticResource TextBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
+                                </WrapPanel>
+                                <TextBlock x:Name="SessionStatusText" Text="Запись остановлена. Маркеры можно ставить только во время записи."
+                                           FontSize="11" Margin="0,9,0,0" />
+                                <DataGrid ItemsSource="{Binding SessionRows}" MinHeight="95" MaxHeight="160" Margin="0,8,0,0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Время" Binding="{Binding TimeText}" Width="130" />
+                                        <DataGridTextColumn Header="Событие / цель" Binding="{Binding Label}" Width="*" />
+                                        <DataGridTextColumn Header="Ping" Binding="{Binding LatencyText}" Width="95" />
+                                        <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
