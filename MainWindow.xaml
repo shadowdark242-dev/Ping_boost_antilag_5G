@@ -434,7 +434,7 @@
                                 <TextBlock Text="Временные изменения на время игры. При выключении всё возвращается; если приложение закрыть, режим выключается автоматически."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,10" />
                                 <CheckBox x:Name="GameModePriorityCheckBox" Content="Высокий приоритет процесса игры" IsChecked="True" Margin="0,0,0,4" />
-                                <CheckBox x:Name="GameModePowerCheckBox" Content="Схема питания «Высокая производительность»" IsChecked="True" Margin="0,0,0,4" />
+                                <CheckBox x:Name="GameModePowerCheckBox" Content="Схема питания «Высокая производительность» и Wi-Fi без энергосбережения" IsChecked="True" Margin="0,0,0,4" />
                                 <CheckBox x:Name="GameModeServicesCheckBox" Content="Остановить фоновые загрузки (Центр обновления, BITS, Delivery Optimization)" IsChecked="True" Margin="0,0,0,10" />
                                 <WrapPanel>
                                     <Button x:Name="GameModeStartButton" Content="Включить игровой режим" Click="GameModeStart_Click" />

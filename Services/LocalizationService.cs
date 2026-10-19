@@ -94,7 +94,7 @@ public static class LocalizationService
         ["ИГРОВОЙ РЕЖИМ"] = "GAME MODE",
         ["Временные изменения на время игры. При выключении всё возвращается; если приложение закрыть, режим выключается автоматически."] = "Temporary changes while you play. Everything is restored when turned off; closing the app turns it off automatically.",
         ["Высокий приоритет процесса игры"] = "High priority for the game process",
-        ["Схема питания «Высокая производительность»"] = "High performance power plan",
+        ["Схема питания «Высокая производительность» и Wi-Fi без энергосбережения"] = "High performance power plan and Wi-Fi without power saving",
         ["Остановить фоновые загрузки (Центр обновления, BITS, Delivery Optimization)"] = "Pause background downloads (Windows Update, BITS, Delivery Optimization)",
         ["Включить игровой режим"] = "Enable game mode", ["Выключен."] = "Off.",
         ["ОТКАТ НАСТРОЕК"] = "RESTORE SETTINGS",

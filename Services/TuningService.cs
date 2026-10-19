@@ -512,7 +512,8 @@ public sealed class TuningService
                 if (!duplicate.Success)
                     throw new InvalidOperationException($"Не удалось включить схему «Высокая производительность»: {duplicate.Error}");
             }
-            parts.Add("схема питания «Высокая производительность»");
+            var wireless = await MaximizeWirelessPerformanceAsync();
+            parts.Add("схема питания «Высокая производительность»" + (wireless is null ? string.Empty : $" ({wireless})"));
         }
 
         if (pauseServices)
@@ -536,10 +537,68 @@ public sealed class TuningService
         return string.Join("; ", parts);
     }
 
+    private const string WirelessSubgroup = "19cbb8fa-5279-450e-9fac-8a3d5fedd0c1";
+    private const string WirelessSaving = "12bbebe6-58d6-4636-95bb-3217ef867c1a";
+
+    /// <summary>
+    /// Sets "Wireless Adapter Settings → Power Saving Mode" of the active scheme to Maximum Performance (0),
+    /// remembering the original AC/DC values for <see cref="ExitGameModeAsync"/>.
+    /// </summary>
+    private async Task<string?> MaximizeWirelessPerformanceAsync()
+    {
+        var active = await QueryAsync("powercfg /getactivescheme");
+        var scheme = active is null ? null : System.Text.RegularExpressions.Regex.Match(active,
+            "[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}").Value;
+        if (string.IsNullOrEmpty(scheme))
+            return null;
+        var query = await QueryAsync($"powercfg /query {scheme} {WirelessSubgroup} {WirelessSaving}");
+        // The last two 0x values are the current AC and DC indexes; the possible-setting indexes are printed without the 0x prefix.
+        var values = query is null
+            ? []
+            : System.Text.RegularExpressions.Regex.Matches(query, "0x[0-9a-fA-F]{8}").Select(match => match.Value).ToArray();
+        if (values.Length < 2)
+            return "параметр энергосбережения Wi-Fi недоступен в этой схеме";
+        var ac = Convert.ToInt32(values[^2], 16);
+        var dc = Convert.ToInt32(values[^1], 16);
+        if (ac == 0 && dc == 0)
+            return "энергосбережение Wi-Fi уже отключено";
+
+        if (_backup.WirelessPlanGuid is null)
+        {
+            _backup.WirelessPlanGuid = scheme;
+            _backup.WirelessAc = ac;
+            _backup.WirelessDc = dc;
+            _store.Save(_backup);
+        }
+        await RunAsync(
+            $"powercfg /setacvalueindex {scheme} {WirelessSubgroup} {WirelessSaving} 0; " +
+            $"powercfg /setdcvalueindex {scheme} {WirelessSubgroup} {WirelessSaving} 0; " +
+            $"powercfg /setactive {scheme}; if ($LASTEXITCODE -ne 0) {{ throw 'powercfg не применил параметр' }}");
+        return $"энергосбережение Wi-Fi: от сети {ac} → 0, от батареи {dc} → 0";
+    }
+
     public async Task<string> ExitGameModeAsync()
     {
         RequireAdministrator();
         var parts = new List<string>();
+        if (_backup.WirelessPlanGuid is { } wirelessPlan && _backup.WirelessAc is { } wirelessAc && _backup.WirelessDc is { } wirelessDc)
+        {
+            var restored = await PowerShellRunner.RunAsync(
+                $"powercfg /setacvalueindex {wirelessPlan} {WirelessSubgroup} {WirelessSaving} {wirelessAc}; " +
+                $"powercfg /setdcvalueindex {wirelessPlan} {WirelessSubgroup} {WirelessSaving} {wirelessDc}; " +
+                "if ($LASTEXITCODE -ne 0) { throw 'powercfg' }");
+            if (restored.Success)
+            {
+                _backup.WirelessPlanGuid = null;
+                _backup.WirelessAc = null;
+                _backup.WirelessDc = null;
+                parts.Add("энергосбережение беспроводного адаптера возвращено");
+            }
+            else
+            {
+                parts.Add($"не удалось вернуть энергосбережение беспроводного адаптера: {restored.Error}");
+            }
+        }
         if (_backup.PowerPlanGuid is { } plan)
         {
             var result = await PowerShellRunner.RunAsync($"powercfg /setactive {plan}; if ($LASTEXITCODE -ne 0) {{ throw 'no plan' }}");

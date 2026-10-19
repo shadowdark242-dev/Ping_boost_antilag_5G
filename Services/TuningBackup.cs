@@ -34,6 +34,9 @@ public sealed class TuningBackup
     public Dictionary<string, AdapterBackup> Adapters { get; set; } = [];
     public List<string> QosPolicies { get; set; } = [];
     public string? PowerPlanGuid { get; set; }
+    public string? WirelessPlanGuid { get; set; }
+    public int? WirelessAc { get; set; }
+    public int? WirelessDc { get; set; }
     public List<string> PausedServices { get; set; } = [];
 }
 
