@@ -15,6 +15,7 @@ public sealed record UdpFlowRow(
     string SentBytesText,
     string ReceivedBytesText,
     string ReceiveRateText,
+    string JitterText,
     string MaxGapText,
     string LastReceiveText);
 
@@ -215,8 +216,19 @@ public sealed class UdpFlowMonitor : IDisposable
                 Prune(now);
                 var times = _receiveTimes.ToArray();
                 double maxGapMs = 0;
+                var gaps = new double[Math.Max(0, times.Length - 1)];
                 for (var i = 1; i < times.Length; i++)
-                    maxGapMs = Math.Max(maxGapMs, (times[i] - times[i - 1]) * 1000d / Stopwatch.Frequency);
+                {
+                    gaps[i - 1] = (times[i] - times[i - 1]) * 1000d / Stopwatch.Frequency;
+                    maxGapMs = Math.Max(maxGapMs, gaps[i - 1]);
+                }
+                // Jitter = standard deviation of the gaps between received packets in the window.
+                var jitterMs = 0d;
+                if (gaps.Length > 1)
+                {
+                    var mean = gaps.Average();
+                    jitterMs = Math.Sqrt(gaps.Sum(gap => (gap - mean) * (gap - mean)) / gaps.Length);
+                }
                 var sinceLastMs = _lastReceive == 0 ? 0 : (now - _lastReceive) * 1000d / Stopwatch.Frequency;
                 if (times.Length > 0)
                     maxGapMs = Math.Max(maxGapMs, sinceLastMs);
@@ -228,6 +240,7 @@ public sealed class UdpFlowMonitor : IDisposable
                     processName, remote, _sentPackets, _receivedPackets,
                     FormatBytes(_sentBytes), FormatBytes(_receivedBytes),
                     $"{rate:0.#} пак/с",
+                    gaps.Length > 1 ? $"{jitterMs:0.#} мс" : "—",
                     times.Length == 0 ? "—" : $"{maxGapMs:0} мс",
                     _lastReceive == 0 ? "—" : $"{sinceLastMs / 1000d:0.0} с назад");
                 return new FlowSnapshot(row, active);

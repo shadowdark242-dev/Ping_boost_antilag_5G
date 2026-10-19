@@ -11,10 +11,8 @@ public static class LocalizationService
         ["Тесты"] = "Tests", ["Обзор и сравнение"] = "Overview & comparison", ["Маршрут"] = "Route",
         ["ГОТОВО К ТЕСТУ"] = "READY TO TEST", ["ИДЁТ ИЗМЕРЕНИЕ"] = "MEASURING",
         ["СЕТЬ И АДАПТЕРЫ"] = "NETWORK & ADAPTERS", ["Обновить"] = "Refresh", ["ЦЕЛИ ТЕСТА"] = "TEST TARGETS",
-        ["Укажите IP-адреса или DNS-имена через запятую или с новой строки."] = "Enter IP addresses or DNS names separated by commas or new lines.",
         ["Начать тест"] = "Start test", ["Остановить"] = "Stop", ["ПОСЛЕДНИЙ PING"] = "LATEST PING",
         ["СРЕДНИЙ ДЖИТТЕР"] = "AVERAGE JITTER", ["ПОТЕРИ"] = "LOSS", ["ЗАДЕРЖКА ВО ВРЕМЕНИ"] = "LATENCY OVER TIME",
-        ["СРАВНЕНИЕ ЦЕЛЕЙ"] = "TARGET COMPARISON", ["БЕЗОПАСНЫЕ РЕКОМЕНДАЦИИ"] = "SAFE RECOMMENDATIONS",
         ["РЕЗУЛЬТАТЫ ДО / ПОСЛЕ"] = "BEFORE / AFTER RESULTS", ["Сохранить ДО"] = "Save baseline",
         ["Сравнить ПОСЛЕ"] = "Compare after", ["Экспорт CSV"] = "Export CSV", ["ЦЕЛЬ"] = "TARGET",
         ["Сейчас"] = "Latest", ["Среднее"] = "Average", ["Джиттер"] = "Jitter", ["Ответы"] = "Replies",
@@ -35,13 +33,6 @@ public static class LocalizationService
         ["Интервал"] = "Interval",
         ["Настройки"] = "Settings", ["Язык интерфейса"] = "Interface language",
         ["Русский"] = "Russian", ["Запускать вместе с Windows (текущий пользователь)"] = "Start with Windows (current user)",
-        ["Профили игр сохраняются локально и содержат параметры целей, теста простоя и keepalive. Профиль не меняет маршрутизацию игрового трафика."] = "Game profiles are stored locally and include target, idle-test, and keepalive settings. Profiles do not change game traffic routing.",
-        ["Новый профиль"] = "New profile", ["Название профиля"] = "Profile name",
-        ["Имя процесса игры (необязательно, без .exe)"] = "Game process name (optional, without .exe)",
-        ["Цели мониторинга (по одной на строку)"] = "Monitoring targets (one per line)",
-        ["Цель теста после простоя"] = "Idle test target", ["Пауза теста простоя (секунды)"] = "Idle test pause (seconds)",
-        ["HTTPS keepalive endpoint"] = "HTTPS keepalive endpoint", ["Интервал keepalive (секунды)"] = "Keepalive interval (seconds)",
-        ["Удалить профиль"] = "Delete profile", ["Сохранить настройки"] = "Save settings",
         ["ROUTE COMPARISON"] = "ROUTE COMPARISON",
         ["TCP: включить ECN"] = "TCP: enable ECN",
         ["Если оператор помечает перегрузку в пакете вместо отбрасывания, TCP снижает скорость до того, как очередь вырастет. Работает только если оператор поддерживает ECN; иначе ничего не меняется. Только TCP, действует на новые соединения."] = "If the carrier marks congestion in the packet instead of dropping it, TCP slows down before the queue grows. Works only if the carrier supports ECN; otherwise nothing changes. TCP only, applies to new connections.",
@@ -75,9 +66,9 @@ public static class LocalizationService
         ["NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer."] = "NetworkThrottlingIndex disabled, SystemResponsiveness=10. Settings from TCP Optimizer.",
         ["MMCSS: высокий приоритет задач Games"] = "MMCSS: high priority for Games tasks",
         ["GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High."] = "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.",
-        ["Оптимизация"] = "Optimization", ["UDP-монитор"] = "UDP monitor", ["Профиль"] = "Profile", ["Статус"] = "Status",
-        ["ПРОФИЛЬ ИГРЫ"] = "GAME PROFILE",
-        ["Профиль хранит цели, параметры теста простоя и keepalive. Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор»."] = "A profile stores targets, idle-test and keepalive settings. The game process is used on the Optimization and UDP monitor tabs.",
+        ["Оптимизация"] = "Optimization", ["UDP-монитор"] = "UDP monitor", ["Статус"] = "Status", ["Сохранить настройки"] = "Save settings",
+        ["ИГРА"] = "GAME",
+        ["Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор». Выберите его из списка (процессы с открытыми UDP-портами) или введите имя без .exe, например cs2."] = "The game process is used on the Optimization and UDP monitor tabs. Pick it from the list (processes with open UDP ports) or type the name without .exe, for example cs2.",
         ["2 секунды"] = "2 seconds",
         ["Для чистого теста задержки после простоя остановите keepalive. Адрес должен быть HTTPS; используйте только доверенный endpoint. Интервал 2 с расходует больше трафика и заряда."] = "Stop keepalive for a clean idle-latency test. Use HTTPS and only a trusted endpoint. A 2 s interval uses more data and battery.",
         ["Перезапустить от администратора"] = "Restart as administrator",
@@ -90,7 +81,7 @@ public static class LocalizationService
         ["Результат появится здесь."] = "The result will appear here.",
         ["Находит самый большой пакет, который проходит до узла без фрагментации (аналог ping -f -l). На мобильных каналах фрагментация UDP может давать потери. Для проверки выберите адрес игрового сервера или публичный узел."] = "Finds the largest packet that reaches the host without fragmentation (like ping -f -l). On mobile links UDP fragmentation can cause loss. Use a game server address or a public host.",
         ["QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)"] = "QoS · GAME UDP TRAFFIC MARKING (DSCP)",
-        ["Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."] = "Windows marks outgoing UDP traffic of the profile's game process with a DSCP priority. It helps on Wi-Fi and networks that honor DSCP; mobile carriers and phone hotspots may clear the mark.",
+        ["Windows помечает исходящий UDP-трафик процесса игры (блок «Игра» на вкладке «Тесты») приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."] = "Windows marks outgoing UDP traffic of the game process with a DSCP priority. It helps on Wi-Fi and networks that honor DSCP; mobile carriers and phone hotspots may clear the mark.",
         ["Включить для процесса игры"] = "Enable for game process", ["Убрать"] = "Remove", ["Политика не создана."] = "No policy created.",
         ["ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)"] = "BACKGROUND UPLOAD LIMIT (BUFFERBLOAT)",
         ["Когда программа забивает исходящий канал, очередь у модема или оператора растёт и пинг в игре подскакивает. Windows ограничит скорость отдачи перечисленных программ политикой QoS. Ограничивается только исходящий трафик; входящий так не ограничить. Не добавляйте сюда саму игру."] = "When a program fills the uplink, the queue at the modem or carrier grows and in-game ping spikes. Windows will limit the upload rate of the listed programs with a QoS policy. Only outgoing traffic is limited; incoming cannot be limited this way. Do not add the game itself.",
@@ -111,11 +102,14 @@ public static class LocalizationService
         ["Сбросить к стандартным настройкам Windows"] = "Reset to Windows defaults",
         ["UDP-трафик игры"] = "Game UDP traffic", ["Начать наблюдение"] = "Start monitoring",
         ["Показывает адреса и порты, с которыми игра обменивается UDP-пакетами, а также скорость приёма и максимальную паузу между принятыми пакетами за последние 10 секунд. Читаются только заголовки (адреса, порты, размер, время), содержимое пакетов не анализируется. Игровой сервер — строка с наибольшим числом пакетов."] = "Shows addresses and ports the game exchanges UDP packets with, the receive rate and the longest gap between received packets over the last 10 seconds. Only headers (addresses, ports, size, timing) are read; packet contents are not inspected. The game server is the row with the most packets.",
-        ["Не запущено. Нужны права администратора. Процесс берётся из профиля игры; если он пуст — показываются все процессы."] = "Not running. Administrator rights are required. The process comes from the game profile; if empty, all processes are shown.",
+        ["СРАВНЕНИЕ ЦЕЛЕЙ"] = "TARGET COMPARISON",
+        ["Готовые DNS-серверы и свои адреса"] = "Ready-made DNS servers and your own addresses", ["Добавить"] = "Add",
+        ["Не запущено (нужны права администратора)."] = "Not running (administrator rights required).",
+        ["Измерения ничего не меняют. «Оптимизация» меняет настройки только после подтверждения и всегда откатывается. Результат не гарантирован."] = "Measurements change nothing. Optimization changes settings only after confirmation and can always be rolled back. Results are not guaranteed.",
+        ["Джиттер приёма"] = "Receive jitter", ["ЛОКАЛЬНЫЕ ПОТЕРИ ЭТОГО ПК"] = "LOCAL LOSS ON THIS PC", ["Появится после начала наблюдения."] = "Appears after monitoring starts.",
         ["Удалённый адрес"] = "Remote address", ["Отправлено"] = "Sent", ["Принято"] = "Received", ["Приём, пак/с"] = "Receive, pkt/s",
         ["Макс. пауза приёма"] = "Max receive gap", ["Последний пакет"] = "Last packet",
         ["Пауза приёма в сотни миллисекунд при активной игре означает, что от сервера не приходили пакеты: потеря или задержка на пути от сервера. Это не видно по ICMP-пингу до роутера или 1.1.1.1. Сравнивайте паузы с ощущаемыми лагами."] = "A receive gap of hundreds of milliseconds during active play means no packets arrived from the server: loss or delay on the path from the server. ICMP ping to the router or 1.1.1.1 does not show this. Compare gaps with the lags you feel.",
-        ["Измерения не меняют систему. Вкладка «Оптимизация» меняет настройки только после вашего подтверждения, сохраняет исходные значения и может вернуть всё к стандартным. Результат зависит от оператора и канала и не гарантирован."] = "Measurements do not change the system. The Optimization tab changes settings only after your confirmation, saves original values and can restore Windows defaults. Results depend on the carrier and link and are not guaranteed."
     };
 
     public static void Apply(DependencyObject root, string language)
@@ -133,8 +127,8 @@ public static class LocalizationService
             text.Text = translated;
         if (node is ContentControl content && content.Content is string value && translations.TryGetValue(value, out translated))
             content.Content = translated;
-        if (node is TabItem tab && tab.Header is string header && translations.TryGetValue(header, out translated))
-            tab.Header = translated;
+        if (node is HeaderedContentControl headered && headered.Header is string header && translations.TryGetValue(header, out translated))
+            headered.Header = translated;
         if (node is DataGrid grid)
             foreach (var column in grid.Columns)
                 if (column.Header is string columnHeader && translations.TryGetValue(columnHeader, out translated))

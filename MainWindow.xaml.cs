@@ -29,7 +29,6 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _monitoringCancellation;
     private CancellationTokenSource? _idleTestCancellation;
     private CancellationTokenSource? _keepAliveCancellation;
-    private bool _loadingProfiles = true;
 
     public ObservableCollection<TargetRow> TargetRows { get; } = [];
     public ObservableCollection<RouteHopRow> RouteRows { get; } = [];
@@ -45,7 +44,8 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             RefreshAdapters();
-            LoadProfiles();
+            GameProcessComboBox.Text = _settings.GameProcessName;
+            InitializeTargets();
             InitializeTuning();
             LocalizationService.Apply(this, _settings.Language);
         };
@@ -55,73 +55,41 @@ public partial class MainWindow : Window
             _monitoringCancellation?.Cancel();
             _idleTestCancellation?.Cancel();
             _keepAliveCancellation?.Cancel();
+            SaveGameProcessName();
             ShutdownTuning();
         };
     }
 
-    private void RefreshAdapters_Click(object sender, RoutedEventArgs e) => RefreshAdapters();
-
-    private GameProfile CreateProfileSnapshot() => new()
+    private void SaveGameProcessName()
     {
-        Name = "Current configuration",
-        ProcessName = GameProcessComboBox.Text.Trim(),
-        MonitorTargets = TargetsTextBox.Text,
-        IdleTarget = IdleTargetTextBox.Text.Trim(),
-        IdleSeconds = GetSelectedSeconds(IdleIntervalComboBox, 15),
-        KeepAliveUrl = KeepAliveUrlTextBox.Text.Trim(),
-        KeepAliveSeconds = GetSelectedSeconds(KeepAliveIntervalComboBox, 10)
-    };
-
-    private void LoadProfiles()
-    {
-        _loadingProfiles = true;
-        GameProfileComboBox.ItemsSource = null;
-        GameProfileComboBox.ItemsSource = _settings.Profiles;
-        GameProfileComboBox.SelectedItem = _settings.Profiles.FirstOrDefault(profile => profile.Name == _settings.SelectedProfile);
-        _loadingProfiles = false;
-        if (GameProfileComboBox.SelectedItem is GameProfile profile)
-            ApplyProfile(profile);
+        var name = GameProcessComboBox.Text.Trim();
+        if (name == _settings.GameProcessName)
+            return;
+        _settings.GameProcessName = name;
+        try { _settingsService.Save(_settings); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Losing the remembered process name is harmless; the user can type it again.
+        }
     }
+
+    private void RefreshAdapters_Click(object sender, RoutedEventArgs e) => RefreshAdapters();
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new SettingsWindow(_settings, CreateProfileSnapshot()) { Owner = this };
+        var dialog = new SettingsWindow(_settings) { Owner = this };
         if (dialog.ShowDialog() != true || !dialog.Saved)
             return;
         _settings = dialog.ResultSettings!;
         try
         {
             _settingsService.Save(_settings);
-            LoadProfiles();
             LocalizationService.Apply(this, _settings.Language);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(this, $"Не удалось сохранить настройки: {ex.Message}", "PingBoost", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private void GameProfile_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (_loadingProfiles || GameProfileComboBox.SelectedItem is not GameProfile profile)
-            return;
-        ApplyProfile(profile);
-        _settings.SelectedProfile = profile.Name;
-        try { _settingsService.Save(_settings); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            GameStatusText.Text = $"Не удалось сохранить выбранный профиль: {ex.Message}";
-        }
-    }
-
-    private void ApplyProfile(GameProfile profile)
-    {
-        TargetsTextBox.Text = profile.MonitorTargets;
-        IdleTargetTextBox.Text = profile.IdleTarget;
-        IdleIntervalComboBox.SelectedItem = FindComboItemByTag(IdleIntervalComboBox, profile.IdleSeconds);
-        KeepAliveUrlTextBox.Text = profile.KeepAliveUrl;
-        KeepAliveIntervalComboBox.SelectedItem = FindComboItemByTag(KeepAliveIntervalComboBox, profile.KeepAliveSeconds);
-        GameProcessComboBox.Text = profile.ProcessName;
     }
 
     private static object? FindComboItemByTag(System.Windows.Controls.ComboBox combo, int seconds) =>
@@ -164,10 +132,11 @@ public partial class MainWindow : Window
 
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
-        var targets = ParseTargets(TargetsTextBox.Text);
-        if (targets.Count == 0 || targets.Any(target => !IsPlausibleHost(target)))
+        var targets = GetSelectedTargets();
+        if (targets.Count == 0)
         {
-            ComparisonText.Text = "Введите корректные IP-адреса или DNS-имена.";
+            ComparisonText.Text = "Отметьте хотя бы один адрес в списке целей.";
+            TargetsExpander.IsExpanded = true;
             return;
         }
 
@@ -182,10 +151,9 @@ public partial class MainWindow : Window
         ChartTargetComboBox.ItemsSource = targets;
         ChartTargetComboBox.SelectedIndex = 0;
         ComparisonText.Text = "Мониторинг запущен. Для сравнения снимите исходный замер кнопкой «Сохранить ДО».";
-        RecommendationsList.ItemsSource = RecommendationService.GetInitialRecommendations();
         UpdateMetricCards(null);
 
-        TargetsTextBox.IsEnabled = false;
+        TargetsExpander.IsEnabled = false;
         StartButton.IsEnabled = false;
         StopButton.IsEnabled = true;
 
@@ -206,7 +174,7 @@ public partial class MainWindow : Window
         {
             _monitoringCancellation?.Dispose();
             _monitoringCancellation = null;
-            TargetsTextBox.IsEnabled = true;
+            TargetsExpander.IsEnabled = true;
             StartButton.IsEnabled = true;
             StopButton.IsEnabled = false;
         }
@@ -545,7 +513,6 @@ public partial class MainWindow : Window
             RefreshTargetRows(targets);
             var selectedHost = ChartTargetComboBox.SelectedItem as string ?? targets[0];
             UpdateMetricCards(GetStatistics(selectedHost));
-            UpdateRecommendations(targets);
             DrawChart();
 
             var remaining = TimeSpan.FromSeconds(1) - (DateTimeOffset.UtcNow - cycleStarted);
@@ -607,16 +574,6 @@ public partial class MainWindow : Window
         PingValue.Text = stats?.LatestMilliseconds is { } ping ? $"{ping} ms" : "—";
         JitterValue.Text = stats?.JitterMilliseconds is { } jitter ? $"{jitter:0.#} ms" : "—";
         LossValue.Text = stats is null ? "—" : $"{stats.LossPercent:0.#}%";
-    }
-
-    private void UpdateRecommendations(IReadOnlyList<string> targets)
-    {
-        var summaries = targets
-            .Select(target => (Host: target, Statistics: GetStatistics(target)))
-            .Where(item => item.Statistics is not null)
-            .Select(item => (item.Host, item.Statistics!))
-            .ToArray();
-        RecommendationsList.ItemsSource = RecommendationService.Create(summaries);
     }
 
     private void DrawChart()
@@ -844,13 +801,6 @@ public partial class MainWindow : Window
         {
             ComparisonText.Text = $"Нет доступа для сохранения CSV: {ex.Message}";
         }
-    }
-
-    private static IReadOnlyList<string> ParseTargets(string text)
-    {
-        return text.Split(new[] { ',', ';', '\r', '\n', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 
     private static bool IsPlausibleHost(string host)

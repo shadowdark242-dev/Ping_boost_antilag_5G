@@ -114,14 +114,12 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="ПРОФИЛЬ ИГРЫ" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Профиль хранит цели, параметры теста простоя и keepalive. Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор»."
+                                <TextBlock Text="ИГРА" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="Процесс игры используется на вкладках «Оптимизация» и «UDP-монитор». Выберите его из списка (процессы с открытыми UDP-портами) или введите имя без .exe, например cs2."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
                                 <WrapPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Профиль" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
-                                    <ComboBox x:Name="GameProfileComboBox" Width="190" DisplayMemberPath="Name" SelectionChanged="GameProfile_SelectionChanged" />
-                                    <TextBlock Text="Процесс" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="14,0,7,0" />
-                                    <ComboBox x:Name="GameProcessComboBox" Width="180" IsEditable="True" ToolTip="Имя процесса без .exe" />
+                                    <TextBlock Text="Процесс" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
+                                    <ComboBox x:Name="GameProcessComboBox" Width="220" IsEditable="True" ToolTip="Имя процесса без .exe" />
                                     <Button Content="Обновить" Margin="6,0,0,0" Click="RefreshProcesses_Click" Style="{StaticResource SecondaryButton}" />
                                 </WrapPanel>
                                 <TextBlock x:Name="GameStatusText" Text="" FontSize="11" Margin="0,9,0,0" TextWrapping="Wrap" />
@@ -202,11 +200,18 @@
                                 <StackPanel>
                                     <TextBlock Text="ЦЕЛИ ТЕСТА" FontSize="10" FontWeight="Bold"
                                                Foreground="{StaticResource MutedBrush}" />
-                                    <TextBlock Text="Укажите IP-адреса или DNS-имена через запятую или с новой строки."
-                                               FontSize="11" Margin="0,4,0,8" Foreground="{StaticResource MutedBrush}" />
-                                    <TextBox x:Name="TargetsTextBox" Text="1.1.1.1&#x0a;8.8.8.8"
-                                             AcceptsReturn="True" Height="56" TextWrapping="Wrap"
-                                             VerticalScrollBarVisibility="Auto" />
+                                    <TextBlock x:Name="TargetsSummaryText" Text="Выбрано: —" FontSize="11" Margin="0,4,0,6"
+                                               TextWrapping="Wrap" />
+                                    <Expander x:Name="TargetsExpander" Header="Готовые DNS-серверы и свои адреса" IsExpanded="False">
+                                        <StackPanel Margin="0,8,0,0">
+                                            <WrapPanel x:Name="TargetsPanel" />
+                                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                                <TextBox x:Name="CustomTargetTextBox" Width="220" ToolTip="IP-адрес или DNS-имя" />
+                                                <Button Content="Добавить" Margin="8,0,0,0" Click="AddCustomTarget_Click" Style="{StaticResource SecondaryButton}" />
+                                            </StackPanel>
+                                            <TextBlock x:Name="CustomTargetStatusText" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Expander>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom"
                                             Margin="12,0,0,0">
@@ -289,14 +294,6 @@
                                         <DataGridTextColumn Header="Ответы" Binding="{Binding SamplesText}" Width="*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
-                                BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,0,12">
-                            <StackPanel>
-                                <TextBlock Text="БЕЗОПАСНЫЕ РЕКОМЕНДАЦИИ" FontSize="11" FontWeight="Bold" />
-                                <ItemsControl x:Name="RecommendationsList" Margin="0,7,0,0" />
                             </StackPanel>
                         </Border>
 
@@ -384,7 +381,7 @@
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Text="QoS · ПОМЕТКА UDP-ТРАФИКА ИГРЫ (DSCP)" FontSize="12" FontWeight="Bold" />
-                                <TextBlock Text="Windows помечает исходящий UDP-трафик процесса из профиля игры приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."
+                                <TextBlock Text="Windows помечает исходящий UDP-трафик процесса игры (блок «Игра» на вкладке «Тесты») приоритетом DSCP. Помогает на Wi-Fi и в сетях, которые учитывают DSCP; оператор мобильной сети и hotspot-телефон метку могут сбросить."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="DSCP" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,0,7,0" />
@@ -493,9 +490,13 @@
                             <Button x:Name="UdpStartButton" Content="Начать наблюдение" Click="UdpStart_Click" />
                             <Button x:Name="UdpStopButton" Content="Остановить" Margin="8,0,0,0" IsEnabled="False"
                                     Click="UdpStop_Click" Style="{StaticResource SecondaryButton}" />
-                            <TextBlock x:Name="UdpStatusText" Text="Не запущено. Нужны права администратора. Процесс берётся из профиля игры; если он пуст — показываются все процессы."
+                            <TextBlock x:Name="UdpStatusText" Text="Не запущено (нужны права администратора)." ToolTip="Процесс берётся из блока «Игра» на вкладке «Тесты»; если он пуст, показываются все процессы."
                                        VerticalAlignment="Center" FontSize="11" Margin="14,0,0,0" TextWrapping="Wrap" />
                         </StackPanel>
+                        <TextBlock Text="ЛОКАЛЬНЫЕ ПОТЕРИ ЭТОГО ПК" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                        <TextBlock x:Name="UdpLocalText" Text="Появится после начала наблюдения." FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBox x:Name="UdpEventsTextBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto" Height="64" FontFamily="Consolas" FontSize="11" Margin="0,6,0,10" />
                     </StackPanel>
                     <Border Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                             BorderThickness="1" CornerRadius="12" Padding="14">
@@ -506,6 +507,7 @@
                                 <DataGridTextColumn Header="Отправлено" Binding="{Binding SentPackets}" Width="*" />
                                 <DataGridTextColumn Header="Принято" Binding="{Binding ReceivedPackets}" Width="*" />
                                 <DataGridTextColumn Header="Приём, пак/с" Binding="{Binding ReceiveRateText}" Width="*" />
+                                <DataGridTextColumn Header="Джиттер приёма" Binding="{Binding JitterText}" Width="*" />
                                 <DataGridTextColumn Header="Макс. пауза приёма" Binding="{Binding MaxGapText}" Width="*" />
                                 <DataGridTextColumn Header="Последний пакет" Binding="{Binding LastReceiveText}" Width="*" />
                             </DataGrid.Columns>
@@ -551,7 +553,7 @@
             </TabItem>
         </TabControl>
 
-        <TextBlock Grid.Row="3" Text="Измерения не меняют систему. Вкладка «Оптимизация» меняет настройки только после вашего подтверждения, сохраняет исходные значения и может вернуть всё к стандартным. Результат зависит от оператора и канала и не гарантирован."
+        <TextBlock Grid.Row="3" Text="Измерения ничего не меняют. «Оптимизация» меняет настройки только после подтверждения и всегда откатывается. Результат не гарантирован."
                    Foreground="{StaticResource MutedBrush}" FontSize="10" TextWrapping="Wrap" Margin="2,12,2,0" />
     </Grid>
 </Window>

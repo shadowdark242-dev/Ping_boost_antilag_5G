@@ -12,6 +12,7 @@ public partial class MainWindow
 {
     private readonly TuningService _tuning = new();
     private readonly UdpFlowMonitor _udpMonitor = new();
+    private readonly LocalLossMonitor _localLoss = new();
     private readonly GameProcessPriorityService _priority = new();
     private readonly Dictionary<string, CheckBox> _tweakChecks = [];
     private DispatcherTimer? _udpTimer;
@@ -254,7 +255,7 @@ public partial class MainWindow
     {
         if (GameProcessName.Length == 0)
         {
-            QosStatusText.Text = "Укажите процесс игры в профиле (вкладка «Тесты»), например cs2.";
+            QosStatusText.Text = "Укажите процесс игры в блоке «Игра» (вкладка «Тесты»), например cs2.";
             return;
         }
         if (!RequireAdministratorRights())
@@ -284,7 +285,7 @@ public partial class MainWindow
     {
         if (GameProcessName.Length == 0)
         {
-            QosStatusText.Text = "Укажите процесс игры в профиле.";
+            QosStatusText.Text = "Укажите процесс игры в блоке «Игра».";
             return;
         }
         if (!RequireAdministratorRights())
@@ -405,7 +406,7 @@ public partial class MainWindow
         }
         if (raisePriority && GameProcessName.Length == 0)
         {
-            GameModeStatusText.Text = "Для повышения приоритета укажите процесс игры в профиле (вкладка «Тесты»).";
+            GameModeStatusText.Text = "Для повышения приоритета укажите процесс игры в блоке «Игра» (вкладка «Тесты»).";
             return;
         }
         if ((powerPlan || services) && !RequireAdministratorRights())
@@ -531,6 +532,9 @@ public partial class MainWindow
         }
 
         UdpRows.Clear();
+        UdpEventsTextBox.Clear();
+        UdpLocalText.Text = "Счётчики запущены, роста пока нет.";
+        _localLoss.Start();
         UdpStartButton.IsEnabled = false;
         UdpStopButton.IsEnabled = true;
         UdpStatusText.Text = GameProcessName.Length == 0
@@ -542,8 +546,27 @@ public partial class MainWindow
             UdpRows.Clear();
             foreach (var row in _udpMonitor.GetRows())
                 UdpRows.Add(row);
+            UpdateLocalLoss();
         };
         _udpTimer.Start();
+    }
+
+    private void UpdateLocalLoss()
+    {
+        var report = _localLoss.Poll();
+        if (report.NewEvents is { } events)
+        {
+            UdpEventsTextBox.AppendText($"{DateTime.Now:HH:mm:ss}  {events}{Environment.NewLine}");
+            UdpEventsTextBox.ScrollToEnd();
+        }
+        var verdict = report.Total == 0
+            ? "Вывод: локальных потерь нет. Лаги с паузами приёма идут извне (сеть, радиоканал)."
+            : "Вывод: ПК теряет пакеты. Проверьте CPU, драйвер и питание адаптера.";
+        UdpLocalText.Text = string.Join(Environment.NewLine,
+            $"UDP, отброшено системой: {report.UdpDiscarded} · с ошибками: {report.UdpErrors}",
+            $"Адаптер, входящие: потеряно {report.NicInDiscarded} · ошибок {report.NicInErrors}",
+            $"Адаптер, исходящие: потеряно {report.NicOutDiscarded} · ошибок {report.NicOutErrors}",
+            verdict);
     }
 
     private void UdpStop_Click(object sender, RoutedEventArgs e)
