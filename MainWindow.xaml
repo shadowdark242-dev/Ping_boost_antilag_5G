@@ -403,7 +403,7 @@
                         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushSoft}"
                                 BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
-                                <TextBlock Text="ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)" FontSize="12" FontWeight="Bold" />
+                                <TextBlock Text="★ ОГРАНИЧЕНИЕ ОТДАЧИ ФОНОВЫХ ПРОГРАММ (BUFFERBLOAT)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
                                 <TextBlock Text="Когда программа забивает исходящий канал, очередь у модема или оператора растёт и пинг в игре подскакивает. Windows ограничит скорость отдачи перечисленных программ политикой QoS. Ограничивается только исходящий трафик; входящий так не ограничить. Не добавляйте сюда саму игру."
                                            Foreground="{StaticResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,12" />
                                 <TextBlock Text="Программы (по одной на строку, без .exe)" Foreground="{StaticResource MutedBrush}" FontSize="11" />

@@ -22,6 +22,9 @@ public partial class MainWindow
 
     public ObservableCollection<UdpFlowRow> UdpRows { get; } = [];
 
+    // The three most useful items; the third one (overall upload ceiling) is a separate card marked in XAML.
+    private static readonly HashSet<string> StarredTweaks = ["tcp-autotune-restricted", "ad-power"];
+
     private AdapterInfo? SelectedAdapter => TuningAdapterComboBox.SelectedItem as AdapterInfo;
 
     private string GameProcessName => System.IO.Path.GetFileNameWithoutExtension(GameProcessComboBox.Text.Trim());
@@ -30,9 +33,24 @@ public partial class MainWindow
     {
         foreach (var tweak in TuningService.Tweaks)
         {
-            var check = new CheckBox { Content = tweak.Title, ToolTip = tweak.Description, Margin = new Thickness(0, 6, 0, 0) };
+            var check = new CheckBox { Content = tweak.Title, ToolTip = tweak.Description, VerticalAlignment = VerticalAlignment.Center };
             _tweakChecks[tweak.Id] = check;
-            TweaksPanel.Children.Add(check);
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            row.Children.Add(check);
+            if (StarredTweaks.Contains(tweak.Id))
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = "★",
+                    ToolTip = "Один из трёх самых полезных пунктов",
+                    Foreground = (System.Windows.Media.Brush)FindResource("AccentBrush"),
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 14,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(8, 0, 0, 0)
+                });
+            }
+            TweaksPanel.Children.Add(row);
             TweaksPanel.Children.Add(new TextBlock
             {
                 Text = tweak.Description,
