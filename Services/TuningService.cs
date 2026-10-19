@@ -50,6 +50,8 @@ public sealed class TuningService
         new("ad-rsc", "Отключить Receive Segment Coalescing на адаптере", "Принятые пакеты не склеиваются перед передачей системе.", true),
         new("tcp-rsc", "Отключить Receive Segment Coalescing глобально", "Системная настройка RSC. Влияет на TCP-трафик, на UDP игры напрямую не влияет.", false),
         new("tcp-timestamps", "Отключить TCP timestamps", "Из TCP-заголовков убираются 12 байт. Только TCP.", false),
+        new("tcp-autotune-restricted", "Ограничить приём TCP: autotuning Restricted", "Окно приёма до 1 МБ: одно соединение не разгонится выше примерно 140 Мбит/с при пинге 60 мс. Скачивание меньше забивает очередь модема. Только TCP, действует на новые соединения.", false),
+        new("tcp-autotune-highly", "Ограничить приём TCP сильнее: autotuning HighlyRestricted", "Окно приёма до 256 КБ: примерно 35 Мбит/с на соединение при пинге 60 мс. Заметно снижает скорость загрузок, а пинг под нагрузкой обычно падает сильнее. Только TCP. Если отмечены оба пункта, применяется этот.", false),
         new("reg-tcpack", "TCP: без задержки ACK и без алгоритма Nagle (выбранный адаптер)", "TcpAckFrequency=1, TCPNoDelay=1, TcpDelAckTicks=0. Только TCP-игры и лаунчеры, UDP не затрагивается.", true),
         new("reg-mmcss", "MMCSS: снять сетевое ограничение и повысить отзывчивость", "NetworkThrottlingIndex=отключено, SystemResponsiveness=10. Параметры из TCP Optimizer.", false),
         new("reg-games", "MMCSS: высокий приоритет задач Games", "GPU Priority 8, Priority 6, Scheduling Category High, SFIO Priority High.", false),
@@ -117,6 +119,8 @@ public sealed class TuningService
                     "ad-rsc" => await ApplyAdapterRscAsync(adapter!),
                     "tcp-rsc" => await ApplyGlobalRscAsync(),
                     "tcp-timestamps" => await ApplyTimestampsAsync(),
+                    "tcp-autotune-restricted" => await ApplyAutoTuningAsync("Restricted"),
+                    "tcp-autotune-highly" => await ApplyAutoTuningAsync("HighlyRestricted"),
                     _ => ApplyRegistry(RegistrySpecs(id, adapter))
                 };
                 log.Add($"✓ {definition.Title}: {message}");
@@ -363,6 +367,16 @@ public sealed class TuningService
         _backup.GlobalRsc ??= current;
         await RunAsync("Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Disabled");
         return "отключено.";
+    }
+
+    private async Task<string> ApplyAutoTuningAsync(string level)
+    {
+        var current = await QueryAsync($"[string](Get-NetTCPSetting -SettingName {TcpSetting}).AutoTuningLevelLocal");
+        if (current is null)
+            return "не удалось прочитать текущее значение.";
+        _backup.Tcp.TryAdd("AutoTuningLevelLocal", current);
+        await RunAsync($"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal {level}");
+        return $"{current} → {level} (новые соединения; открытые загрузки продолжат со старым окном).";
     }
 
     private async Task<string> ApplyTimestampsAsync()
@@ -653,6 +667,8 @@ public sealed class TuningService
 
         if (_backup.Tcp.TryGetValue("Timestamps", out var timestamps))
             log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps {timestamps}"));
+        if (_backup.Tcp.TryGetValue("AutoTuningLevelLocal", out var autoTuning))
+            log.Add(await TryAsync("TCP autotuning", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal {autoTuning}"));
         if (_backup.GlobalRsc is { } rsc)
             log.Add(await TryAsync("RSC (глобально)", $"Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing {rsc}"));
 
@@ -722,6 +738,7 @@ public sealed class TuningService
         log.Add("✓ Реестр: TcpAckFrequency / TCPNoDelay / TcpDelAckTicks удалены у всех интерфейсов.");
 
         log.Add(await TryAsync("TCP timestamps", $"Set-NetTCPSetting -SettingName {TcpSetting} -Timestamps Disabled"));
+        log.Add(await TryAsync("TCP autotuning (Normal)", $"Set-NetTCPSetting -SettingName {TcpSetting} -AutoTuningLevelLocal Normal"));
         log.Add(await TryAsync("RSC (глобально)", "Set-NetOffloadGlobalSetting -ReceiveSegmentCoalescing Enabled"));
 
         var adapters = await GetAdaptersAsync();
@@ -817,6 +834,8 @@ public sealed class TuningService
         var lines = new List<string>();
         var tcp = await QueryAsync($"\"TCP timestamps: $((Get-NetTCPSetting -SettingName {TcpSetting}).Timestamps)\"");
         lines.Add(tcp ?? "TCP timestamps: не удалось прочитать");
+        var autoTuning = await QueryAsync($"\"TCP autotuning: $((Get-NetTCPSetting -SettingName {TcpSetting}).AutoTuningLevelLocal)\"");
+        lines.Add(autoTuning ?? "TCP autotuning: не удалось прочитать");
         var rsc = await QueryAsync("\"RSC (глобально): $((Get-NetOffloadGlobalSetting).ReceiveSegmentCoalescing)\"");
         lines.Add(rsc ?? "RSC: не удалось прочитать");
 
