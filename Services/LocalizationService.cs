@@ -34,6 +34,7 @@ public static class LocalizationService
         ["Настройки"] = "Settings", ["Язык интерфейса"] = "Interface language",
         ["Русский"] = "Russian", ["Запускать вместе с Windows (текущий пользователь)"] = "Start with Windows (current user)",
         ["ROUTE COMPARISON"] = "ROUTE COMPARISON",
+        ["▾ В трей"] = "▾ To tray",
         ["TCP: включить ECN"] = "TCP: enable ECN",
         ["Если оператор помечает перегрузку в пакете вместо отбрасывания, TCP снижает скорость до того, как очередь вырастет. Работает только если оператор поддерживает ECN; иначе ничего не меняется. Только TCP, действует на новые соединения."] = "If the carrier marks congestion in the packet instead of dropping it, TCP slows down before the queue grows. Works only if the carrier supports ECN; otherwise nothing changes. TCP only, applies to new connections.",
         ["Общий потолок отдачи всего ПК"] = "Overall upload ceiling for the whole PC",

@@ -3,12 +3,18 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PingBoost</AssemblyName>
     <RootNamespace>PingBoost</RootNamespace>
     <ApplicationIcon>Assets\PingBoost.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- WinForms is only used for the tray icon; its implicit usings would clash with WPF type names. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\PingBoost.ico" />
   </ItemGroup>

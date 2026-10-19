@@ -46,6 +46,7 @@ public partial class MainWindow : Window
             RefreshAdapters();
             GameProcessComboBox.Text = _settings.GameProcessName;
             InitializeTargets();
+            InitializeTray();
             InitializeTuning();
             LocalizationService.Apply(this, _settings.Language);
         };
@@ -56,6 +57,7 @@ public partial class MainWindow : Window
             _idleTestCancellation?.Cancel();
             _keepAliveCancellation?.Cancel();
             SaveGameProcessName();
+            ShutdownTray();
             ShutdownTuning();
         };
     }
@@ -85,6 +87,7 @@ public partial class MainWindow : Window
         {
             _settingsService.Save(_settings);
             LocalizationService.Apply(this, _settings.Language);
+            RefreshTrayMenu();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

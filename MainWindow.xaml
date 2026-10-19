@@ -25,6 +25,10 @@
                 </StackPanel>
             </StackPanel>
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="TrayButton" Content="▾ В трей" ToolTip="Спрятать окно в область уведомлений. Вернуть: значок PingBoost в трее."
+                        Height="44" Padding="16,0" Margin="0,0,8,0" Click="MinimizeToTray_Click"
+                        Background="White" Foreground="{StaticResource TextBrush}"
+                        BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
                 <Button x:Name="SettingsButton" Content="⚙" FontFamily="Segoe UI Symbol" FontSize="22"
                         Width="48" Height="44" Padding="0" HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center" ClipToBounds="False"

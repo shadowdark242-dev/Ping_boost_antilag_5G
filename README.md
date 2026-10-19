@@ -21,6 +21,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
   - **restore buttons**: "Restore state from before PingBoost" (uses a backup saved before the first change) and "Reset to Windows defaults" (sets documented defaults for every managed setting, even without a backup).
 - **UDP monitor tab** (administrator rights): passive per-remote-endpoint UDP statistics for the game process from the Windows kernel ETW network provider - packet counts, receive rate, receive jitter and the longest gap between received packets over 10 seconds. It also shows system-wide local loss counters (UDP datagrams dropped by Windows, adapter discards and errors) to tell loss on this PC from loss outside it. Only addresses, ports, sizes and timing are read.
 - Keepalive interval choices from 2 to 60 seconds.
+- **Tray:** the "To tray" button hides the window into the notification area; clicking the tray icon restores it, and its right-click menu has Restore and Exit.
 - Stores the Russian/English UI preference, the current-user Windows startup setting, the last game process name and the test target list (ready-made public DNS servers plus your own addresses) as JSON under the user's LocalAppData folder.
 - Provides an opt-in HTTPS keepalive with a configurable interval and request/response-body counters.
 - Opens the official Waveform Bufferbloat Test after a separate confirmation. Waveform displays idle/download/upload latency, jitter, and its A+–F grade.
