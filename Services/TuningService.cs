@@ -56,7 +56,6 @@ public sealed class TuningService
         new("ad-eee", "Отключить Energy-Efficient Ethernet / Green Ethernet", "Убирает короткие «засыпания» проводного порта между пакетами.", true),
         new("ad-roam", "Минимальная агрессивность роуминга Wi-Fi", "Адаптер реже сканирует эфир и переключается между точками; уменьшает скачки пинга при игре через Wi-Fi.", true),
         new("ad-lso", "Отключить Large Send Offload", "Пакеты формируются процессором, а не сетевой картой. Иногда убирает задержки пакетов при отправке.", true),
-        new("ad-rsc", "Отключить Receive Segment Coalescing на адаптере", "Принятые пакеты не склеиваются перед передачей системе.", true),
         new("tcp-rsc", "Отключить Receive Segment Coalescing глобально", "Системная настройка RSC. Влияет на TCP-трафик, на UDP игры напрямую не влияет.", false),
         new("tcp-timestamps", "Отключить TCP timestamps", "Из TCP-заголовков убираются 12 байт. Только TCP.", false),
         new("tcp-autotune-restricted", "Ограничить приём TCP: autotuning Restricted", "Окно приёма до 1 МБ: одно соединение не разгонится выше примерно 140 Мбит/с при пинге 60 мс. Скачивание меньше забивает очередь модема. Только TCP, действует на новые соединения.", false),
@@ -124,7 +123,6 @@ public sealed class TuningService
                     "ad-power" => await ApplyPowerAsync(adapter!),
                     "ad-irq" or "ad-eee" or "ad-roam" => await ApplyAdvancedAsync(adapter!, AdvancedTweaks[id]),
                     "ad-lso" => await ApplyLsoAsync(adapter!),
-                    "ad-rsc" => await ApplyAdapterRscAsync(adapter!),
                     "tcp-rsc" => await ApplyGlobalRscAsync(),
                     "tcp-timestamps" => await ApplyTimestampsAsync(),
                     "tcp-autotune-restricted" => await ApplyAutoTuningAsync("Restricted"),
@@ -348,21 +346,6 @@ public sealed class TuningService
         for (var i = 0; i < names.Length && i < flags.Length; i++)
             if (flags[i].Equals("True", StringComparison.OrdinalIgnoreCase))
                 await RunAsync($"Set-NetAdapterLso -Name {name} -{names[i]} $false -NoRestart");
-        return "отключено.";
-    }
-
-    private async Task<string> ApplyAdapterRscAsync(AdapterInfo adapter)
-    {
-        var name = PowerShellRunner.Quote(adapter.Name);
-        var current = await QueryAsync($"$r=Get-NetAdapterRsc -Name {name} -ErrorAction SilentlyContinue; if($r){{ \"$($r.IPv4Enabled),$($r.IPv6Enabled)\" }}");
-        if (string.IsNullOrEmpty(current))
-            return "адаптер не поддерживает RSC, пропущено.";
-        BackupFor(adapter).Rsc ??= current;
-        var flags = current.Split(',');
-        string[] names = ["IPv4Enabled", "IPv6Enabled"];
-        for (var i = 0; i < names.Length && i < flags.Length; i++)
-            if (flags[i].Equals("True", StringComparison.OrdinalIgnoreCase))
-                await RunAsync($"Set-NetAdapterRsc -Name {name} -{names[i]} $false -NoRestart");
         return "отключено.";
     }
 
@@ -908,7 +891,6 @@ public sealed class TuningService
             applied["tcp-rsc"] = Flag(parts[3] == "Disabled");
             // An empty value means the adapter does not expose LSO / RSC at all.
             applied["ad-lso"] = parts[4].Length == 0 ? TweakState.Unsupported : Flag(AllFlagsOff(parts[4]));
-            applied["ad-rsc"] = parts[5].Length == 0 ? TweakState.Unsupported : Flag(AllFlagsOff(parts[5]));
         }
 
         applied["reg-mmcss"] = Flag(RegistryApplied(RegistrySpecs("reg-mmcss", adapter)));

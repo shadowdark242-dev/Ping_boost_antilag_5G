@@ -54,8 +54,6 @@ public static class LocalizationService
         ["Адаптер реже сканирует эфир и переключается между точками; уменьшает скачки пинга при игре через Wi-Fi."] = "The adapter scans and switches access points less often; reduces ping spikes when playing over Wi-Fi.",
         ["Отключить Large Send Offload"] = "Disable Large Send Offload",
         ["Пакеты формируются процессором, а не сетевой картой. Иногда убирает задержки пакетов при отправке."] = "Packets are built by the CPU instead of the network card. Sometimes removes send-side packet delays.",
-        ["Отключить Receive Segment Coalescing на адаптере"] = "Disable Receive Segment Coalescing on the adapter",
-        ["Принятые пакеты не склеиваются перед передачей системе."] = "Received packets are not merged before being passed to the system.",
         ["Отключить Receive Segment Coalescing глобально"] = "Disable Receive Segment Coalescing globally",
         ["Системная настройка RSC. Влияет на TCP-трафик, на UDP игры напрямую не влияет."] = "System-wide RSC setting. Affects TCP traffic; does not directly affect game UDP.",
         ["Отключить TCP timestamps"] = "Disable TCP timestamps",

@@ -12,7 +12,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
 - Compares ping immediately after network activity with ping after a selected idle period (5, 15, 30, or 60 seconds; five cycles).
 - Runs a paired A/B experiment with and without HTTPS keepalive at the same idle interval, reporting average and median RTT changes.
 - **Optimization tab** (requires administrator rights; no driver is installed, everything uses documented PowerShell cmdlets and registry values):
-  - adapter tweaks: disable adapter power saving, Interrupt Moderation, Energy-Efficient/Green Ethernet, Large Send Offload and Receive Segment Coalescing, lowest Wi-Fi roaming aggressiveness (only settings the driver actually exposes are touched);
+  - adapter tweaks: disable adapter power saving, Interrupt Moderation, Energy-Efficient/Green Ethernet, Large Send Offload, lowest Wi-Fi roaming aggressiveness (only settings the driver actually exposes are touched);
   - TCP Optimizer-style system tweaks: TCP timestamps, global RSC, per-adapter `TcpAckFrequency`/`TCPNoDelay`, MMCSS network throttling and Games task priority;
   - MTU probe (largest IPv4 packet that passes without fragmentation) with an optional apply step;
   - upload limit for background programs (Windows QoS throttle policy) to keep the uplink queue short and reduce bufferbloat;
