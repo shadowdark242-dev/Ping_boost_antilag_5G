@@ -92,13 +92,23 @@ public partial class MainWindow
             if (version != _appliedRefreshVersion)
                 return; // a newer refresh (for example after another adapter was chosen) is on its way
             _appliedNow.Clear();
+            var english = _settings.Language == "en";
             foreach (var (id, check) in _tweakChecks)
             {
-                var on = applied.TryGetValue(id, out var value) && value;
-                if (on)
+                var state = applied.TryGetValue(id, out var value) ? value : TweakState.Off;
+                var badge = _tweakBadges[id];
+                if (state == TweakState.On)
                     _appliedNow.Add(id);
-                check.IsChecked = on;
-                _tweakBadges[id].Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+                check.IsChecked = state == TweakState.On;
+                // A tweak the adapter cannot do is greyed out instead of silently doing nothing.
+                check.IsEnabled = state != TweakState.Unsupported;
+                badge.Visibility = state == TweakState.Off ? Visibility.Collapsed : Visibility.Visible;
+                badge.Text = state == TweakState.Unsupported
+                    ? (english ? "not supported by this adapter" : "не поддерживается этим адаптером")
+                    : (english ? "enabled" : "включено");
+                badge.Foreground = state == TweakState.Unsupported
+                    ? System.Windows.Media.Brushes.Gray
+                    : System.Windows.Media.Brushes.SeaGreen;
             }
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or System.Text.Json.JsonException or IOException or System.Security.SecurityException)
