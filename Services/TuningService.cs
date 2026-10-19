@@ -197,29 +197,74 @@ public sealed class TuningService
         return entry;
     }
 
+    /// <summary>Clears only the power-off bits PingBoost sets, leaving other PnPCapabilities bits of the driver intact.</summary>
+    private static string ResetDeviceSleep(AdapterInfo adapter)
+    {
+        try
+        {
+            var classKey = FindAdapterClassKey(adapter.Guid);
+            if (classKey is null)
+                return $"— {adapter.Name}: питание устройства: раздел драйвера не найден";
+            using var key = Registry.LocalMachine.OpenSubKey(classKey, writable: true);
+            if (key?.GetValue("PnPCapabilities") is not int current || (current & PnpDisableDeviceSleep) != PnpDisableDeviceSleep)
+                return $"✓ {adapter.Name}: питание устройства (запрет не был установлен)";
+            var cleared = current & ~PnpDisableDeviceSleep;
+            if (cleared == 0)
+                key.DeleteValue("PnPCapabilities", throwOnMissingValue: false);
+            else
+                key.SetValue("PnPCapabilities", cleared, RegistryValueKind.DWord);
+            return $"✓ {adapter.Name}: питание устройства (PnPCapabilities {current} → {(cleared == 0 ? "не задано" : cleared)})";
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            return $"✗ {adapter.Name}: питание устройства: {ex.Message}";
+        }
+    }
+
+    private const string NetClassPath = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
+    private const int PnpDisableDeviceSleep = 0x18;
+
+    private static string? FindAdapterClassKey(string interfaceGuid)
+    {
+        using var root = Registry.LocalMachine.OpenSubKey(NetClassPath);
+        if (root is null)
+            return null;
+        foreach (var name in root.GetSubKeyNames())
+        {
+            if (!int.TryParse(name, out _))
+                continue;
+            using var key = root.OpenSubKey(name);
+            if (string.Equals(key?.GetValue("NetCfgInstanceId") as string, interfaceGuid, StringComparison.OrdinalIgnoreCase))
+                return $@"{NetClassPath}\{name}";
+        }
+        return null;
+    }
+
     private async Task<string> ApplyPowerAsync(AdapterInfo adapter)
     {
         var name = PowerShellRunner.Quote(adapter.Name);
-        var backup = BackupFor(adapter);
         var parts = new List<string>();
-        var sleep = await QueryAsync($"(Get-NetAdapterPowerManagement -Name {name} -ErrorAction SilentlyContinue).AllowComputerToTurnOffDevice");
-        if (sleep is "Enabled" or "Disabled")
+        // "Allow the computer to turn off this device to save power" has no cmdlet parameter; Device Manager
+        // stores it in the PnPCapabilities bit mask (0x18) of the adapter's driver key.
+        var classKey = FindAdapterClassKey(adapter.Guid);
+        if (classKey is null)
         {
-            backup.DeviceSleep ??= sleep;
-            if (sleep == "Enabled")
-            {
-                await RunAsync($"Set-NetAdapterPowerManagement -Name {name} -AllowComputerToTurnOffDevice Disabled -NoRestart");
-                var after = await QueryAsync($"(Get-NetAdapterPowerManagement -Name {name} -ErrorAction SilentlyContinue).AllowComputerToTurnOffDevice");
-                parts.Add($"питание устройства: {sleep} → {after ?? "?"}");
-            }
-            else
-            {
-                parts.Add("питание устройства: уже Disabled");
-            }
+            parts.Add("питание устройства: раздел драйвера адаптера не найден, пропущено");
         }
         else
         {
-            parts.Add($"питание устройства: драйвер не поддерживает ({sleep ?? "нет данных"})");
+            using var key = Registry.LocalMachine.OpenSubKey(classKey);
+            var current = key?.GetValue("PnPCapabilities") is int existing ? existing : 0;
+            var desired = current | PnpDisableDeviceSleep;
+            if (desired == current)
+            {
+                parts.Add("питание устройства: уже запрещено выключать");
+            }
+            else
+            {
+                ApplyRegistry([new RegistryValueSpec(classKey, "PnPCapabilities", RegistryValueKind.DWord, desired, null)]);
+                parts.Add($"питание устройства: PnPCapabilities {current} → {desired} (вступит в силу после перезапуска адаптера)");
+            }
         }
         var advanced = await ApplyAdvancedAsync(adapter, AdvancedTweaks["ad-power"]);
         parts.Add(advanced);
@@ -566,8 +611,6 @@ public sealed class TuningService
                 }
                 log.Add(await TryAsync($"{name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(value)} -NoRestart"));
             }
-            if (adapter.DeviceSleep is { } sleep)
-                log.Add(await TryAsync($"{name}: питание устройства", $"Set-NetAdapterPowerManagement -Name {quoted} -AllowComputerToTurnOffDevice {sleep} -NoRestart"));
             if (adapter.Lso is { } lso)
                 log.Add(await TryAsync($"{name}: LSO", LsoScript(quoted, lso)));
             if (adapter.Rsc is { } adapterRsc)
@@ -625,9 +668,10 @@ public sealed class TuningService
                 if (prop.Default.Length > 0 && prop.Default != prop.Value && !prop.Value.Contains(',') && !prop.Default.Contains(','))
                     log.Add(await TryAsync($"{adapter.Name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(KeywordPattern(keyword))} -RegistryValue {PowerShellRunner.Quote(prop.Default)} -NoRestart"));
             }
-            log.Add(await TryAsync($"{adapter.Name}: питание устройства", $"Set-NetAdapterPowerManagement -Name {quoted} -AllowComputerToTurnOffDevice Enabled -NoRestart"));
-            log.Add(await TryAsync($"{adapter.Name}: LSO", $"Enable-NetAdapterLso -Name {quoted} -NoRestart"));
-            log.Add(await TryAsync($"{adapter.Name}: RSC", $"Enable-NetAdapterRsc -Name {quoted} -NoRestart"));
+            log.Add(ResetDeviceSleep(adapter));
+            // Not every adapter supports LSO/RSC; enabling is attempted only where the feature exists.
+            log.Add(await TryAsync($"{adapter.Name}: LSO", $"if (Get-NetAdapterLso -Name {quoted} -ErrorAction SilentlyContinue) {{ Enable-NetAdapterLso -Name {quoted} -NoRestart }}"));
+            log.Add(await TryAsync($"{adapter.Name}: RSC", $"if (Get-NetAdapterRsc -Name {quoted} -ErrorAction SilentlyContinue) {{ Enable-NetAdapterRsc -Name {quoted} -NoRestart }}"));
             var mtu = _backup.Adapters.TryGetValue(adapter.Name, out var saved) ? saved.Mtu : null;
             log.Add(await TryAsync($"{adapter.Name}: MTU {mtu ?? 1500}", $"Set-NetIPInterface -InterfaceAlias {quoted} -AddressFamily IPv4 -NlMtuBytes {mtu ?? 1500}"));
         }
@@ -724,6 +768,12 @@ public sealed class TuningService
             var sleep = await QueryAsync($"\"Разрешено отключать для экономии энергии: $((Get-NetAdapterPowerManagement -Name {PowerShellRunner.Quote(adapter.Name)} -ErrorAction SilentlyContinue).AllowComputerToTurnOffDevice)\"");
             if (!string.IsNullOrWhiteSpace(sleep))
                 lines.Add(sleep);
+            var classKey = FindAdapterClassKey(adapter.Guid);
+            if (classKey is not null)
+            {
+                using var driverKey = Registry.LocalMachine.OpenSubKey(classKey);
+                lines.Add($"PnPCapabilities: {FormatRegistry(driverKey?.GetValue("PnPCapabilities"))} (биты 0x18 = запрет выключать устройство)");
+            }
             var keywords = AdvancedTweaks.Values.SelectMany(map => map.Keys).Distinct().ToArray();
             foreach (var (keyword, prop) in await ReadAdvancedAsync(adapter, keywords))
                 lines.Add($"{keyword}: {prop.Value} (по умолчанию {prop.Default}; допустимо: {(prop.Valid.Count == 0 ? "—" : string.Join("/", prop.Valid))}; строк {prop.Rows}, значений {prop.Values})");
