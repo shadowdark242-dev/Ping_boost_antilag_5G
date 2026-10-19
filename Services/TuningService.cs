@@ -207,8 +207,19 @@ public sealed class TuningService
         {
             backup.DeviceSleep ??= sleep;
             if (sleep == "Enabled")
+            {
                 await RunAsync($"Set-NetAdapterPowerManagement -Name {name} -AllowComputerToTurnOffDevice Disabled -NoRestart");
-            parts.Add("питание устройства");
+                var after = await QueryAsync($"(Get-NetAdapterPowerManagement -Name {name} -ErrorAction SilentlyContinue).AllowComputerToTurnOffDevice");
+                parts.Add($"питание устройства: {sleep} → {after ?? "?"}");
+            }
+            else
+            {
+                parts.Add("питание устройства: уже Disabled");
+            }
+        }
+        else
+        {
+            parts.Add($"питание устройства: драйвер не поддерживает ({sleep ?? "нет данных"})");
         }
         var advanced = await ApplyAdvancedAsync(adapter, AdvancedTweaks["ad-power"]);
         parts.Add(advanced);
@@ -221,20 +232,45 @@ public sealed class TuningService
         if (props.Count == 0)
             return "драйвер не предоставляет эти параметры, пропущено.";
         var backup = BackupFor(adapter);
+        var notes = new List<string>();
         var changed = new List<string>();
         foreach (var (keyword, prop) in props)
         {
             var wanted = desired[keyword];
-            if (prop.Valid.Count == 0 || !prop.Valid.Contains(wanted))
+            if (prop.Value.Contains(','))
+            {
+                notes.Add($"{keyword}: несколько значений ({prop.Value}), не трогаю");
                 continue;
+            }
+            if (prop.Valid.Count == 0 || !prop.Valid.Contains(wanted))
+            {
+                notes.Add($"{keyword}: значение {wanted} не поддерживается (допустимо: {(prop.Valid.Count == 0 ? "список пуст" : string.Join("/", prop.Valid))}), пропущено");
+                continue;
+            }
             backup.Advanced.TryAdd(keyword, prop.Value);
             if (prop.Value == wanted)
+            {
+                notes.Add($"{keyword}: уже {wanted}");
                 continue;
+            }
             await RunAsync($"Set-NetAdapterAdvancedProperty -Name {PowerShellRunner.Quote(adapter.Name)} " +
                            $"-RegistryKeyword {PowerShellRunner.Quote(keyword)} -RegistryValue {PowerShellRunner.Quote(wanted)} -NoRestart");
             changed.Add(keyword);
         }
-        return changed.Count == 0 ? "уже настроено или значение не поддерживается драйвером." : $"изменено: {string.Join(", ", changed)}.";
+
+        if (changed.Count > 0)
+        {
+            var verified = await ReadAdvancedAsync(adapter, changed);
+            foreach (var keyword in changed)
+            {
+                var before = props[keyword].Value;
+                var after = verified.TryGetValue(keyword, out var current) ? current.Value : "?";
+                notes.Add(after == desired[keyword]
+                    ? $"{keyword}: {before} → {after}"
+                    : $"{keyword}: после записи значение {after}, драйвер не принял изменение");
+            }
+        }
+        return string.Join("; ", notes) + ".";
     }
 
     private async Task<string> ApplyLsoAsync(AdapterInfo adapter)
@@ -571,7 +607,7 @@ public sealed class TuningService
             var quoted = PowerShellRunner.Quote(adapter.Name);
             foreach (var (keyword, prop) in await ReadAdvancedAsync(adapter, keywords))
             {
-                if (prop.Default.Length > 0 && prop.Default != prop.Value)
+                if (prop.Default.Length > 0 && prop.Default != prop.Value && !prop.Value.Contains(',') && !prop.Default.Contains(','))
                     log.Add(await TryAsync($"{adapter.Name}: {keyword}", $"Set-NetAdapterAdvancedProperty -Name {quoted} -RegistryKeyword {PowerShellRunner.Quote(keyword)} -RegistryValue {PowerShellRunner.Quote(prop.Default)} -NoRestart"));
             }
             log.Add(await TryAsync($"{adapter.Name}: питание устройства", $"Set-NetAdapterPowerManagement -Name {quoted} -AllowComputerToTurnOffDevice Enabled -NoRestart"));

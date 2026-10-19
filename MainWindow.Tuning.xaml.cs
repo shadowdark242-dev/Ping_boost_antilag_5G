@@ -70,7 +70,8 @@ public partial class MainWindow
 
     private void AppendTuningLog(IEnumerable<string> lines)
     {
-        TuningLogTextBox.Text = string.Join(Environment.NewLine, lines);
+        // The log accumulates so the result of "apply" is not lost when the state is shown afterwards.
+        TuningLogTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}]{Environment.NewLine}{string.Join(Environment.NewLine, lines)}{Environment.NewLine}{Environment.NewLine}");
         TuningLogTextBox.ScrollToEnd();
     }
 
@@ -164,7 +165,7 @@ public partial class MainWindow
         SetTuningBusy(true);
         try
         {
-            TuningLogTextBox.Text = await _tuning.DescribeAsync(SelectedAdapter);
+            AppendTuningLog([await _tuning.DescribeAsync(SelectedAdapter)]);
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or System.Text.Json.JsonException)
         {
