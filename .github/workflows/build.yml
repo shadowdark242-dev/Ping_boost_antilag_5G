@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Read the version from the project
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content PingBoost.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if (-not $version) { throw 'No <Version> in PingBoost.csproj' }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Publish (self-contained, Windows x64)
+        run: dotnet publish PingBoost.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: PingBoost-${{ env.VERSION }}-win-x64
+          path: publish
+          if-no-files-found: error

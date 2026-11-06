@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PingBoost</AssemblyName>
     <RootNamespace>PingBoost</RootNamespace>
+    <Version>0.1.0</Version>
     <ApplicationIcon>Assets\PingBoost.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
