@@ -5,6 +5,11 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Create the GitHub release v<project version> from this commit'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -40,11 +45,13 @@ jobs:
           path: publish
           if-no-files-found: error
 
-      - name: Create the GitHub release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Create the GitHub release (v* tag or manual run with "publish")
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ($env:GITHUB_REF_NAME -ne "v$env:VERSION") { throw "Tag $env:GITHUB_REF_NAME does not match project version $env:VERSION" }
-          gh release create $env:GITHUB_REF_NAME "PingBoost-$env:VERSION-win-x64.zip" --title "PingBoost $env:VERSION" --notes-file .github/release-notes.md
+          $tag = "v$env:VERSION"
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $tag) { throw "Tag $env:GITHUB_REF_NAME does not match project version $env:VERSION" }
+          # Creates the tag at this commit when it does not exist yet.
+          gh release create $tag "PingBoost-$env:VERSION-win-x64.zip" --target $env:GITHUB_SHA --title "PingBoost $env:VERSION" --notes-file .github/release-notes.md
