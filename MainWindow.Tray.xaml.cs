@@ -34,7 +34,7 @@ public partial class MainWindow
 
     private void RefreshTrayMenu()
     {
-        var english = _settings.Language == "en";
+        var english = _settings.EffectiveLanguage == "en";
         if (_trayRestoreItem is not null)
             _trayRestoreItem.Text = english ? "Restore" : "Развернуть";
         if (_trayExitItem is not null)
@@ -68,7 +68,7 @@ public partial class MainWindow
         if (!_trayHintShown)
         {
             _trayHintShown = true;
-            var english = _settings.Language == "en";
+            var english = _settings.EffectiveLanguage == "en";
             _trayIcon.ShowBalloonTip(3000, "PingBoost",
                 english ? "Still running. Click the tray icon to restore, right-click for the menu."
                         : "Работает в фоне. Щёлкните значок в трее, чтобы развернуть; правая кнопка открывает меню.",

@@ -17,9 +17,10 @@ public partial class SettingsWindow : Window
             StartWithWindows = settings.StartWithWindows,
             GameProcessName = settings.GameProcessName
         };
-        LanguageComboBox.SelectedIndex = settings.Language == "en" ? 1 : 0;
+        // The box shows the language in use now (the Windows language until the user saves a choice).
+        LanguageComboBox.SelectedIndex = settings.EffectiveLanguage == "en" ? 1 : 0;
         StartupCheckBox.IsChecked = settings.StartWithWindows;
-        LocalizationService.Apply(this, settings.Language);
+        LocalizationService.Apply(this, settings.EffectiveLanguage);
     }
 
     private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

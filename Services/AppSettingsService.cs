@@ -1,11 +1,26 @@
-using System.Text.Json;
+using System.Globalization;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PingBoost.Services;
 
 public sealed class AppSettings
 {
-    public string Language { get; set; } = "ru";
+    /// <summary>"ru" or "en" once the user has chosen a language in the settings; empty means "follow Windows".</summary>
+    public string Language { get; set; } = string.Empty;
+
+    /// <summary>The language actually used: the saved choice, otherwise the Windows display language.</summary>
+    [JsonIgnore]
+    public string EffectiveLanguage => ResolveLanguage(Language);
+
+    public static string ResolveLanguage(string saved)
+    {
+        if (saved is "ru" or "en")
+            return saved;
+        // Only Russian and English are translated; neighbouring Cyrillic-script languages are closer to Russian than to English.
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "ru" or "uk" or "be" or "kk" ? "ru" : "en";
+    }
     public bool StartWithWindows { get; set; }
     /// <summary>Last game process name (without .exe), reused by the Optimization and UDP monitor tabs.</summary>
     public string GameProcessName { get; set; } = string.Empty;

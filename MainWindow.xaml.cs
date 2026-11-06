@@ -48,7 +48,7 @@ public partial class MainWindow : Window
             InitializeTargets();
             InitializeTray();
             InitializeTuning();
-            LocalizationService.Apply(this, _settings.Language);
+            LocalizationService.Apply(this, _settings.EffectiveLanguage);
         };
         ChartCanvas.SizeChanged += (_, _) => DrawChart();
         Closed += (_, _) =>
@@ -86,7 +86,7 @@ public partial class MainWindow : Window
         try
         {
             _settingsService.Save(_settings);
-            LocalizationService.Apply(this, _settings.Language);
+            LocalizationService.Apply(this, _settings.EffectiveLanguage);
             RefreshTrayMenu();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

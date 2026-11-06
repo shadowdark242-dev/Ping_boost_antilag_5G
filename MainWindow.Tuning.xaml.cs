@@ -92,7 +92,7 @@ public partial class MainWindow
             if (version != _appliedRefreshVersion)
                 return; // a newer refresh (for example after another adapter was chosen) is on its way
             _appliedNow.Clear();
-            var english = _settings.Language == "en";
+            var english = _settings.EffectiveLanguage == "en";
             foreach (var (id, check) in _tweakChecks)
             {
                 var state = applied.TryGetValue(id, out var value) ? value : TweakState.Off;
