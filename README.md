@@ -56,6 +56,12 @@ dotnet build .\PingBoost.csproj
 dotnet run --project .\PingBoost.csproj
 ```
 
+To get a single self-contained `PingBoost.exe` (no .NET installation needed):
+
+```powershell
+dotnet publish .\PingBoost.csproj -c Release -r win-x64 -o publish
+```
+
 Restoring NuGet packages requires internet access once (`Microsoft.Diagnostics.Tracing.TraceEvent` for the UDP and network monitors). Run the app as administrator to use the Optimization and UDP monitor tabs and the speed columns of the Network monitor tab; the app offers a restart button.
 
 The latest changes were compile-checked against the WPF reference assemblies on Linux; they have not yet been run on Windows, so test them on a non-critical session first and keep the restore buttons in mind.
