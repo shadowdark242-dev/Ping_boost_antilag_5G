@@ -74,7 +74,7 @@ public sealed class NetConnectionMonitor : IDisposable
             catch (Exception ex)
             {
                 // ETW can fail in many ways (another trace owns the session, policy); fall back to the table-only view.
-                CaptureProblem = ex.Message;
+                CaptureProblem = $"{ex.GetType().Name}: {ex.Message}";
             }
         }
 
