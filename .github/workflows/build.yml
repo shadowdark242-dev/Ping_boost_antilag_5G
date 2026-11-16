@@ -44,6 +44,7 @@ jobs:
           name: PingBoost-${{ env.VERSION }}-win-x64
           path: publish
           if-no-files-found: error
+          retention-days: 7
 
       - name: Create the GitHub release (v* tag or manual run with "publish")
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
