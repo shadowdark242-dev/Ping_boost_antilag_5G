@@ -11,6 +11,17 @@
     <Version>0.1.0</Version>
     <ApplicationIcon>Assets\PingBoost.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- Publishing with a runtime id produces one self-contained PingBoost.exe instead of a folder of libraries. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- TraceEvent loads KernelTraceControl.dll from an amd64 folder next to the app; extract all content so it is found. -->
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <!-- WinForms is only used for the tray icon; its implicit usings would clash with WPF type names. -->
     <Using Remove="System.Windows.Forms" />

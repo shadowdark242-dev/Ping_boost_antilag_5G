@@ -44,9 +44,7 @@ public sealed class TuningBackupStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public string Path { get; } = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PingBoost", "tuning-backup.json");
+    public string Path { get; } = DataLocation.Resolve("tuning-backup.json");
 
     public bool Exists => File.Exists(Path);
 

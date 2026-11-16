@@ -27,7 +27,7 @@ public static class GameProcessService
     private static readonly Dictionary<int, (string Name, DateTime Resolved)> NameCache = [];
 
     /// <summary>The table is polled every second by the UDP monitor, so names are cached and handles are released.</summary>
-    private static string ResolveName(int pid)
+    public static string ResolveName(int pid)
     {
         lock (NameCache)
         {
