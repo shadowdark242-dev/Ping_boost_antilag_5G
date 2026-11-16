@@ -23,7 +23,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
 - **Network monitor tab**: a Task Manager-style list of every TCP connection and UDP flow of the PC with the owning process, the remote server name (for example `www.google.com`), speed in each direction, totals and TCP retransmit counts. Click a column header to sort (for example by speed), filter by text, show only connections with traffic, or group by process. The connection list works without elevation; per-connection speeds need administrator rights (kernel ETW network provider, shared with the UDP monitor). Server names come from the Windows DNS client cache, otherwise from reverse DNS, so a name can be a CDN host rather than the site. Monitoring runs only while the tab is open. Only addresses, ports and sizes are read.
 - Keepalive interval choices from 2 to 60 seconds.
 - **Tray:** the "To tray" button hides the window into the notification area; clicking the tray icon restores it, and its right-click menu has Restore and Exit.
-- Stores the Russian/English UI preference, the current-user Windows startup setting, the last game process name and the test target list (ready-made public DNS servers plus your own addresses) as JSON under the user's LocalAppData folder.
+- Stores the Russian/English UI preference, the current-user Windows startup setting, the last game process name and the test target list (ready-made public DNS servers plus your own addresses) as JSON files (`settings.json`) next to `PingBoost.exe`, so the app is portable. If that folder is not writable, `%LOCALAPPDATA%\PingBoost` is used; files from earlier builds there are copied over once.
 - Provides an opt-in HTTPS keepalive with a configurable interval and request/response-body counters.
 - Opens the official Waveform Bufferbloat Test after a separate confirmation. Waveform displays idle/download/upload latency, jitter, and its A+–F grade.
 - Saves a baseline snapshot, lets you rerun measurements after changing one setting, and compares only the new samples.
@@ -31,7 +31,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
 
 ## Limitations and safety
 
-- Measurements never change the system. The Optimization tab changes settings only after an explicit confirmation, stores the original values in `%LOCALAPPDATA%\PingBoost\tuning-backup.json`, and does not promise a lower ping.
+- Measurements never change the system. The Optimization tab changes settings only after an explicit confirmation, stores the original values in `tuning-backup.json` next to `PingBoost.exe`, and does not promise a lower ping.
 - Without a relay server PingBoost cannot reroute or duplicate game packets (what ExitLag/GearUP do); it only tunes the local part of the path: adapter, Windows network stack, Wi-Fi and cellular behavior.
 - Some adapter settings restart the adapter and drop the connection for a few seconds. DSCP marks may be cleared by a mobile carrier or a phone hotspot. Adapter keywords differ between drivers; unsupported ones are skipped.
 - The UDP monitor attributes packets to a process through the UDP owner table (local port -> PID). It does not prove which packets the game lost; a long receive gap shows that nothing arrived from the server for that time.

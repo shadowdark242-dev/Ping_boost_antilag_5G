@@ -34,9 +34,7 @@ public sealed class AppSettingsService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public string SettingsPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PingBoost", "settings.json");
+    public string SettingsPath { get; } = DataLocation.Resolve("settings.json");
 
     public AppSettings Load()
     {
