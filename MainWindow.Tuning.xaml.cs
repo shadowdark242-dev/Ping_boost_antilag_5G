@@ -73,6 +73,7 @@ public partial class MainWindow
         _priorityTimer?.Stop();
         _mtuCancellation?.Cancel();
         _udpMonitor.Dispose();
+        ShutdownNetworkMonitor();
         _priority.Restore();
         if (_gameModeActive)
         {

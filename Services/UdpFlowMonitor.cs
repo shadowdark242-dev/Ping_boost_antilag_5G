@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
-using Microsoft.Diagnostics.Tracing.Parsers;
-using Microsoft.Diagnostics.Tracing.Session;
 
 namespace PingBoost.Services;
 
@@ -32,15 +30,13 @@ public sealed class UdpFlowMonitor : IDisposable
 
     private readonly ConcurrentDictionary<(int Pid, string Remote), Flow> _flows = new();
     private volatile Dictionary<int, GameUdpEndpoint> _portOwners = [];
-    private TraceEventSession? _session;
-    private Task? _worker;
     private Task? _refresher;
     private CancellationTokenSource? _cancellation;
     private string _processFilter = string.Empty;
 
-    public bool IsRunning => _session is not null;
+    public bool IsRunning => _cancellation is not null;
 
-    public static bool IsElevated => TraceEventSession.IsElevated() == true;
+    public static bool IsElevated => KernelNetHub.IsElevated;
 
     public void Start(string processName)
     {
@@ -52,28 +48,11 @@ public sealed class UdpFlowMonitor : IDisposable
         _flows.Clear();
         _processFilter = Path.GetFileNameWithoutExtension(processName.Trim());
         _portOwners = BuildPortMap();
-        _cancellation = new CancellationTokenSource();
 
-        var session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-        try
-        {
-            session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-        }
-        catch
-        {
-            // Do not leave a half-configured kernel session running.
-            session.Dispose();
-            _cancellation.Dispose();
-            _cancellation = null;
-            throw;
-        }
-        var kernel = session.Source.Kernel;
-        kernel.UdpIpSend += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: true);
-        kernel.UdpIpRecv += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: false);
-        kernel.UdpIpSendIPV6 += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: true);
-        kernel.UdpIpRecvIPV6 += data => OnPacket(data.saddr, data.sport, data.daddr, data.dport, data.size, data.ProcessID, outbound: false);
-        _session = session;
-        _worker = Task.Run(() => session.Source.Process());
+        // Throws when the session cannot be started; nothing is held in that case.
+        KernelNetHub.Acquire();
+        KernelNetHub.Packet += OnHubPacket;
+        _cancellation = new CancellationTokenSource();
 
         var token = _cancellation.Token;
         _refresher = Task.Run(async () =>
@@ -89,17 +68,15 @@ public sealed class UdpFlowMonitor : IDisposable
 
     public void Stop()
     {
-        _cancellation?.Cancel();
-        var session = _session;
-        _session = null;
-        session?.Dispose();
-        try { _worker?.Wait(TimeSpan.FromSeconds(3)); }
-        catch (AggregateException) { }
+        if (_cancellation is null)
+            return;
+        KernelNetHub.Packet -= OnHubPacket;
+        KernelNetHub.Release();
+        _cancellation.Cancel();
         try { _refresher?.Wait(TimeSpan.FromSeconds(2)); }
         catch (AggregateException) { }
-        _cancellation?.Dispose();
+        _cancellation.Dispose();
         _cancellation = null;
-        _worker = null;
         _refresher = null;
     }
 
@@ -129,6 +106,12 @@ public sealed class UdpFlowMonitor : IDisposable
             // Keep the previous attribution data; the next refresh will try again.
         }
         return map;
+    }
+
+    private void OnHubPacket(NetPacket packet)
+    {
+        if (!packet.IsTcp)
+            OnPacket(packet.Source, packet.SourcePort, packet.Destination, packet.DestinationPort, packet.Size, packet.ProcessId, packet.Outbound);
     }
 
     private void OnPacket(IPAddress source, int sourcePort, IPAddress destination, int destinationPort, int size, int headerPid, bool outbound)

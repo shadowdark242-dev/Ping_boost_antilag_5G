@@ -20,6 +20,7 @@ A Windows application for diagnosing network quality. The interface uses a clean
   - game mode: High process priority, High performance power plan and temporary pause of Windows Update/BITS/Delivery Optimization;
   - **restore buttons**: "Restore state from before PingBoost" (uses a backup saved before the first change) and "Reset to Windows defaults" (sets documented defaults for every managed setting, even without a backup).
 - **UDP monitor tab** (administrator rights): passive per-remote-endpoint UDP statistics for the game process from the Windows kernel ETW network provider - packet counts, receive rate, receive jitter and the longest gap between received packets over 10 seconds. It also shows system-wide local loss counters (UDP datagrams dropped by Windows, adapter discards and errors) to tell loss on this PC from loss outside it. Only addresses, ports, sizes and timing are read.
+- **Network monitor tab**: a Task Manager-style list of every TCP connection and UDP flow of the PC with the owning process, the remote server name (for example `www.google.com`), speed in each direction, totals and TCP retransmit counts. Click a column header to sort (for example by speed), filter by text, show only connections with traffic, or group by process. The connection list works without elevation; per-connection speeds need administrator rights (kernel ETW network provider, shared with the UDP monitor). Server names come from the Windows DNS client cache, otherwise from reverse DNS, so a name can be a CDN host rather than the site. Monitoring runs only while the tab is open. Only addresses, ports and sizes are read.
 - Keepalive interval choices from 2 to 60 seconds.
 - **Tray:** the "To tray" button hides the window into the notification area; clicking the tray icon restores it, and its right-click menu has Restore and Exit.
 - Stores the Russian/English UI preference, the current-user Windows startup setting, the last game process name and the test target list (ready-made public DNS servers plus your own addresses) as JSON under the user's LocalAppData folder.
@@ -55,7 +56,7 @@ dotnet build .\PingBoost.csproj
 dotnet run --project .\PingBoost.csproj
 ```
 
-Restoring NuGet packages requires internet access once (`Microsoft.Diagnostics.Tracing.TraceEvent` for the UDP monitor). Run the app as administrator to use the Optimization and UDP monitor tabs; the app offers a restart button.
+Restoring NuGet packages requires internet access once (`Microsoft.Diagnostics.Tracing.TraceEvent` for the UDP and network monitors). Run the app as administrator to use the Optimization and UDP monitor tabs and the speed columns of the Network monitor tab; the app offers a restart button.
 
 The latest changes were compile-checked against the WPF reference assemblies on Linux; they have not yet been run on Windows, so test them on a non-critical session first and keep the restore buttons in mind.
 
